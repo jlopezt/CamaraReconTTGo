@@ -11,21 +11,13 @@
 #include <cacharro.h>
 /***************************** Includes *****************************/
 
-cacharroClass::cacharroClass() {  }
-
-int cacharroClass::getVuelta(void) {return vuelta;};
-void cacharroClass::setVuelta(int valor) {vuelta=valor;};
-void cacharroClass::incVuelta(void) {vuelta++;};
+cacharroClass::cacharroClass() {}
 
 int cacharroClass::getNivelActivo(void) {return nivelActivo;};
 void cacharroClass::setNivelActivo(int nivel) {nivelActivo=nivel;};
 
 String cacharroClass::getNombreDispositivo(void) {return nombre_dispositivo;};
 void cacharroClass::setNombreDispositivo(String nombre) {nombre_dispositivo=nombre;};
-
-//int cacharroClass::getDebugGlobal(void) {return debugGlobal;};
-//void cacharroClass::setDebugGlobal(int debug){debugGlobal=debug;};
-//void cacharroClass::swapDebugGlobal(void) {++debugGlobal=debugGlobal % 2;};
 
 /********************************** Funciones de configuracion global **************************************/
 /************************************************/

@@ -54,62 +54,7 @@ void handleRoot()
   //genero la respuesta por defecto  
   cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
   cad += "<BR>\n";
-
-  //Entradas  
-  cad += "<TABLE style=\"border: 2px solid black\">\n";
-  cad += "<CAPTION>Entradas</CAPTION>\n";  
-  for(int8_t i=0;i<MAX_ENTRADAS;i++)
-    {    
-    if(Entradas.entradaConfigurada(i)==CONFIGURADO) cad += "<TR><TD>" + Entradas.nombreEntrada(i) + "-></TD><TD>" + String(Entradas.estadoEntrada(i)) + "</TD></TR>\n";
-    }
-  cad += "</TABLE>\n";
-  cad += "<BR>";
-  
-  //Salidas
-  cad += "\n<TABLE style=\"border: 2px solid blue\">\n";
-  cad += "<CAPTION>Salidas</CAPTION>\n";  
-  for(int8_t i=0;i<MAX_RELES;i++)
-    {
-    if(Salidas.releConfigurado(i)==CONFIGURADO)
-      {      
-      cad += "<TR>\n";
-      cad += "<TD>" + Salidas.nombreRele(i) + "-></TD><TD>" + String(Salidas.estadoRele(i)) + "</TD>";            
-
-      //compruebo si esta asociada a un plan de secuenciador
-      if(Salidas.asociadaASecuenciador(i)!=NO_CONFIGURADO && Secuenciador.estadoSecuenciador())//Si esa asociada a un secuenciador o el secuenciador esta on
-        {
-        cad += "<TD colspan=2> | Secuenciador " + String(Salidas.asociadaASecuenciador(i)) + "</TD>";
-        }
-      else      
-        {
-        //Enlace para activar o desactivar
-        if (Salidas.estadoRele(i)==1) orden="desactiva"; else orden="activa";//para 0 y 2 (apagado y en pulso) activa
-        cad += "<TD><a href=\"" + orden + "Rele\?id=" + String(i) + "\" target=\"_self\">" + orden + " rele</a></TD>\n";  
-        //Enlace para generar un pulso
-        cad += "<TD><a href=\"pulsoRele\?id=" + String(i) + "\" target=\"_self\">Pulso</a></TD>\n";
-        }
-        
-      cad += "</TR>\n";        
-      }
-    }
-  cad += "</TABLE>\n";
-  
-  //Secuenciadores
-  cad += "<BR><BR>\n";
-  cad += "\n<TABLE style=\"border: 2px solid blue\">\n";
-  cad += "<CAPTION>Secuenciadores</CAPTION>\n";  
-  for(int8_t i=0;i<MAX_PLANES;i++)
-    {
-    if(Secuenciador.planConfigurado(i)==CONFIGURADO)
-      {      
-      cad += "<TR>\n";
-      if (Secuenciador.estadoSecuenciador()) cad += "<TD><a href=\"desactivaSecuenciador\" \" target=\"_self\">Desactiva secuenciador</TD>";            
-      else cad += "<TD><a href=\"activaSecuenciador\" \" target=\"_self\">Activa secuenciador</TD>";            
-      cad += "</TR>\n";  
-      }
-    }
-  cad += "</TABLE>\n";
-  
+ 
   //Enlaces
   cad += "<BR><BR>\n";
   cad += enlaces;
@@ -128,140 +73,9 @@ void handleRoot()
 void handleEstado(void)
   {
   String cad="";
-
-  cad  = Entradas.generaJsonEstadoEntradas();
-  cad += Salidas.generaJsonEstadoSalidas();
   
   server.send(200, "text/json", cad); 
   }  
-
-/***************************************************/
-/*                                                 */
-/*  Servicio de consulta de estado de las salidas  */ 
-/*  devuelve un formato json                       */
-/*                                                 */
-/***************************************************/  
-void handleEstadoSalidas(void)
-  {
-  String cad=Salidas.generaJsonEstadoSalidas();
-  
-  server.send(200, "text/json", cad); 
-  }
-  
-/*****************************************************/
-/*                                                   */
-/*  Servicio de consulta de estado de las entradas   */
-/*  devuelve un formato json                         */
-/*                                                   */
-/*****************************************************/  
-void handleEstadoEntradas(void)
-  {
-  String cad=Entradas.generaJsonEstadoEntradas();
-  
-  server.send(200, "text/json", cad); 
-  }
-  
-/*********************************************/
-/*                                           */
-/*  Servicio de actuacion de rele            */
-/*                                           */
-/*********************************************/  
-void handleActivaRele(void)
-  {
-  if(server.hasArg("id") ) 
-    {
-    int8_t id=server.arg("id").toInt();
-
-    //activaRele(id);
-    Salidas.conmutaRele(id, cacharro.getNivelActivo(), debugGlobal);
-
-    handleRoot();
-    }
-    else server.send(404, "text/plain", "");  
-  }
-
-/*********************************************/
-/*                                           */
-/*  Servicio de desactivacion de rele        */
-/*                                           */
-/*********************************************/  
-void handleDesactivaRele(void)
-  {
-  if(server.hasArg("id") ) 
-    {
-    int8_t id=server.arg("id").toInt();
-
-    //desactivaRele(id);
-    Salidas.conmutaRele(id, !cacharro.getNivelActivo(), debugGlobal);
-    
-    handleRoot();
-    }
-  else server.send(404, "text/plain", ""); 
-  }
-
-/*********************************************/
-/*                                           */
-/*  Servicio de pulso de rele                */
-/*                                           */
-/*********************************************/  
-void handlePulsoRele(void)
-  {
-  if(server.hasArg("id") ) 
-    {
-    int8_t id=server.arg("id").toInt();
-
-    //desactivaRele(id);
-    Salidas.pulsoRele(id);
-    
-    handleRoot();
-    }
-  else server.send(404, "text/plain", ""); 
-  }
-
-/*********************************************/
-/*                                           */
-/*  Servicio de representacion de los        */
-/*  planes del secuenciador                  */
-/*                                           */
-/*********************************************/  
-void handlePlanes(void)
-  {
-  String cad=cabeceraHTML;
-  cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
-
-  for(int8_t i=0;i<Secuenciador.getNumPlanes();i++)
-    {
-    cad += Secuenciador.pintaPlanHTML(i);
-    cad += "<BR><BR>";
-    }
-  
-  cad += pieHTML;
-    
-  server.send(200, "text/html", cad); 
-  
-  }
-
-/*********************************************/
-/*                                           */
-/*  Servicio para activar el secuenciador    */
-/*                                           */
-/*********************************************/  
-void handleActivaSecuenciador(void)
-  {
-  Secuenciador.activarSecuenciador();
-  handleRoot();
-  }
-
-/*********************************************/
-/*                                           */
-/*  Servicio para desactivar el secuenciador */
-/*                                           */
-/*********************************************/  
-void handleDesactivaSecuenciador(void)
-  {
-  Secuenciador.desactivarSecuenciador();
-  handleRoot();
-  }
 
 /*********************************************/
 /*                                           */
@@ -320,11 +134,6 @@ void handleInfo(void)
   cad += "<BR>";  
   cad += "nivelActivo: " + String(cacharro.getNivelActivo());
   cad += "<BR>";  
-  for(int8_t i=0;i<MAX_RELES;i++)
-    {
-    cad += "Rele " + String(i) + " nombre: " + Salidas.nombreRele(i) + "| estado: " + Salidas.estadoRele(i);    
-    cad += "<BR>";   
-    }
   cad += "-----------------------------------------------<BR>";  
   
   cad += "<BR>-----------------WiFi info-----------------<BR>";
@@ -622,14 +431,6 @@ void inicializaWebServer(void)
   //decalra las URIs a las que va a responder
   server.on("/", handleRoot); //Responde con la iodentificacion del modulo
   server.on("/estado", handleEstado); //Servicio de estdo de reles
-  server.on("/estadoSalidas", handleEstadoSalidas); //Servicio de estdo de reles
-  server.on("/estadoEntradas", handleEstadoEntradas); //Servicio de estdo de reles    
-  server.on("/activaRele", handleActivaRele); //Servicio de activacion de rele
-  server.on("/desactivaRele", handleDesactivaRele);  //Servicio de desactivacion de rele
-  server.on("/pulsoRele", handlePulsoRele);  //Servicio de pulso de rele
-  server.on("/planes", handlePlanes);  //Servicio de representacion del plan del secuenciador
-	server.on("/activaSecuenciador", handleActivaSecuenciador);  //Servicio para activar el secuenciador
-  server.on("/desactivaSecuenciador", handleDesactivaSecuenciador);  //Servicio para desactivar el secuenciador
   
   server.on("/test", handleTest);  //URI de test
 

@@ -123,13 +123,12 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length)
   if(cad==String(miMQTT.gettopicRoot() + "/" + miMQTT.getID_MQTT() + "/entradas")) return;
   if(cad==String(miMQTT.gettopicRoot() + "/" + miMQTT.getID_MQTT() + "/salidas")) return;
   
-  //si es del tipo "casa/#"
-  //copio el topic a la cadena cad
+    //copio el topic a la cadena cad
 
   if(cad.substring(0,String(miMQTT.gettopicRoot() + "/" + miMQTT.getID_MQTT()).length())!=String(miMQTT.gettopicRoot() + "/" + miMQTT.getID_MQTT())) //no deberia, solo se suscribe a los suyos
     {
-  Serial.printf("Valor de String(topicRoot + ID_MQTT).length()\n topicRoot: #%s#\nID_MQTT: #%s#\nlongitud: %i\n",miMQTT.gettopicRoot().c_str(),miMQTT.getID_MQTT().c_str(),String(miMQTT.gettopicRoot() + miMQTT.getID_MQTT()).length());
-  Serial.printf("Subcadena cad.substring(0,String(topicRoot + ID_MQTT).length()): %s\n",cad.substring(0,String(miMQTT.gettopicRoot() + miMQTT.getID_MQTT()).length()).c_str());
+    Serial.printf("Valor de String(topicRoot + ID_MQTT).length()\n topicRoot: #%s#\nID_MQTT: #%s#\nlongitud: %i\n",miMQTT.gettopicRoot().c_str(),miMQTT.getID_MQTT().c_str(),String(miMQTT.gettopicRoot() + miMQTT.getID_MQTT()).length());
+    Serial.printf("Subcadena cad.substring(0,String(topicRoot + ID_MQTT).length()): %s\n",cad.substring(0,String(miMQTT.gettopicRoot() + miMQTT.getID_MQTT()).length()).c_str());
   
 
     Serial.printf("topic no reconocido: \ntopic: %s\nroot: %s\n", cad.c_str(),cad.substring(0,cad.indexOf("/")).c_str());  
@@ -149,16 +148,8 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length)
     JsonObject& root = jsonBuffer.parseObject(mensaje);
     if (root.success()) 
       {  
-      //Registro el satelite y copio sobre la habitacion correspondiente del array los datos recibidos
-      int id=atoi(root["id"]);      
-      int estado;
-      if(root["estado"]=="off") estado=0;       
-      else if(root["estado"]=="on") estado=1;           
-      else if(root["estado"]=="pulso") estado=2;
-      else estado=0;//OJO valor arbitrario por omision     
-       
-      Salidas.actuaRele(id, estado);
       }
+    /*********************Fin leo JSON**********************/  
     }
   }
 
@@ -252,41 +243,7 @@ void miMQTTClass::atiendeMQTT(boolean debug)
 /*********************************************/
 void miMQTTClass::enviaDatos(boolean debug)
   {
-  String payload;
-
-  //**************************************ENTRADAS******************************************
-  if(publicarEntradas==1)
-    {
-    payload=Entradas.generaJsonEstadoEntradas();//genero el json de las entradas
-    //Lo envio al bus    
-    if(enviarMQTT("entradas", payload)) 
-      {
-      if(debug)Serial.println("Enviado json al broker con exito.");
-      }
-    else 
-      {
-      if(debug)Serial.println("¡¡Error al enviar json al broker!!");
-      }
-    }
-  else 
-    {
-    if(debug)Serial.printf("No publico entradas. Publicar entradas es %i\n",publicarEntradas);
-    }
-  //******************************************SALIDAS******************************************
-  if(publicarSalidas==1)
-    {
-    payload=Salidas.generaJsonEstadoSalidas();//genero el json de las salidas
-    //Lo envio al bus    
-    if(enviarMQTT("salidas", payload)) 
-      {
-      if(debug)Serial.println("Enviado json al broker con exito.");
-      }
-    else 
-      {
-      if(debug)Serial.println("¡¡Error al enviar json al broker!!");  
-      }
-    }  
-  else if(debug)Serial.printf("No publico salidas. Publicar salidas es %i\n",publicarSalidas);  
+ 
   }
 
 /******************************* UTILIDADES *************************************/

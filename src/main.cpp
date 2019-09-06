@@ -1,9 +1,7 @@
 /*
- * Actuador con E/S
- *
- * Actuador remoto
+ * Camara servomotorizada
  * 
- * Reles de conexion y entradas digitales
+ * Camara OV2640 y Micro Servos 9g
  * 
  * Servicio web levantado en puerto PUERTO_WEBSERVER
  */
@@ -14,9 +12,6 @@
 // Una vuela de loop son ANCHO_INTERVALO segundos 
 #define ANCHO_INTERVALO         100 //Ancho en milisegundos de la rodaja de tiempo
 #define FRECUENCIA_OTA            5 //cada cuantas vueltas de loop atiende las acciones
-#define FRECUENCIA_ENTRADAS       5 //cada cuantas vueltas de loop atiende las entradas
-#define FRECUENCIA_SALIDAS        5 //cada cuantas vueltas de loop atiende las salidas
-#define FRECUENCIA_SECUENCIADOR  10 //cada cuantas vueltas de loop atiende al secuenciador
 #define FRECUENCIA_SERVIDOR_WEB   1 //cada cuantas vueltas de loop atiende el servidor web
 #define FRECUENCIA_MQTT          10 //cada cuantas vueltas de loop envia y lee del broker MQTT
 #define FRECUENCIA_ENVIO_DATOS   50 //cada cuantas vueltas de loop envia al broker el estado de E/S
@@ -25,16 +20,8 @@
 
 /***************************** Includes *****************************/
 #include <Global.h>
-#include <cacharro.h>
 #include <OTA.h>
-#include <ArduinoJson.h>
-#include <SistemaFicheros.h>
-#include <SNTP.h>
-#include <RedWifi.h>
 #include <Ordenes.h>
-#include <Wifi_MQTT.h>
-
-#include <Secuenciador.h>
 #include <ServidorWeb.h>
 /***************************** Includes *****************************/
 
@@ -99,16 +86,13 @@ void setup()
     }
   else Serial.println("No se pudo conectar al WiFi");
 
-  //Entradas y Salidas
-  Serial.println("\n\nInit entradas ------------------------------------------------------------------------\n");
-  Entradas.inicializaEntradas();
-
-  Serial.println("\n\nInit salidas ------------------------------------------------------------------------\n");
-  Salidas.inicializaSalidas();
-
-  //Secuenciador
-  Serial.println("\n\nInit secuenciador ---------------------------------------------------------------------\n");
-  Secuenciador.inicializaSecuenciador();
+  //Servos
+  Serial.println("\n\nInit servos ---------------------------------------------------------------------\n");
+  //Servo.inicializaServo();
+  
+  //Camara
+  Serial.println("\n\nInit camara ---------------------------------------------------------------------\n");
+  //Camara.inicializacamara();
   
   //Ordenes serie
   Serial.println("\n\nInit Ordenes ----------------------------------------------------------------------\n");  
@@ -130,7 +114,7 @@ void setup()
 void loop()
   {  
   //referencia horaria de entrada en el bucle
-  time_t EntradaBucle=0;
+  unsigned long EntradaBucle=0;
   EntradaBucle=millis();//Hora de entrada en la rodaja de tiempo
 
   //------------- EJECUCION DE TAREAS --------------------------------------
@@ -138,9 +122,6 @@ void loop()
   //Prioridad 0: OTA es prioritario.
   if ((vuelta % FRECUENCIA_OTA)==0) gestionaOTA(); //Gestion de actualizacion OTA
   //Prioridad 2: Funciones de control.
-  if ((vuelta % FRECUENCIA_ENTRADAS)==0) Entradas.consultaEntradas(debugGlobal); //comprueba las entradas
-  if ((vuelta % FRECUENCIA_SALIDAS)==0) Salidas.actualizaSalidas(debugGlobal); //comprueba las salidas
-  if ((vuelta % FRECUENCIA_SECUENCIADOR)==0) Secuenciador.actualizaSecuenciador(debugGlobal); //Actualiza la salida del secuenciador
   //Prioridad 3: Interfaces externos de consulta    
   if ((vuelta % FRECUENCIA_SERVIDOR_WEB)==0) webServer(debugGlobal); //atiende el servidor web
   if ((vuelta % FRECUENCIA_MQTT)==0) miMQTT.atiendeMQTT(debugGlobal);      
