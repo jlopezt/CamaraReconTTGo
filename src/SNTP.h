@@ -43,15 +43,10 @@ date is M10.5.0.
 #ifndef _SNTP_
 #define _SNTP_
 
-#define MES_CAMBIO_HORARIO_UP   3 //marzo
-#define MES_CAMBIO_HORARIO_DOWN 10 //octubre
-#define DOMINGO 7
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
-#include <Global.h>
-#include <TimeLib.h>  // download from: http://www.arduino.cc/playground/Code/Time
-#include <Time.h>
+
 /***************************** Includes *****************************/
 
 class relojClass

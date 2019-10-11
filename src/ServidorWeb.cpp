@@ -14,9 +14,12 @@ Informacion del Hw del sistema http://IP/info
 ************************************************************************************************/
 
 /***************************** Defines *****************************/
+//Configuracion de los servicios web
+#define PUERTO_WEBSERVER  80
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
+#include <Global.h>
 #include <ServidorWeb.h>
 #include <WebServer.h> //#include <ESP8266WebServer.h>
 /***************************** Includes *****************************/
@@ -410,7 +413,7 @@ void handleNotFound()
   message += "URI: ";
   message += server.uri();
   message += "\nMethod: ";
-  message += (server.method() == HTTP_GET)?"GET":"POST";
+  message += (server.method() == HTTP___GET)?"GET":"POST";
   message += "\nArguments: ";
   message += server.args();
   message += "\n";

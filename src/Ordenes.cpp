@@ -12,9 +12,14 @@
  */
 
 /***************************** Defines *****************************/
+#define LONG_COMANDO 40
+#define LONG_PARAMETRO 30
+
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
+#include <Global.h>
+#include <SPIFFS.h>
 #include <Ordenes.h>
 #include <inttypes.h>
 /***************************** Includes *****************************/

@@ -14,15 +14,12 @@
 /***************************** Defines *****************************/
 #ifndef _ORDENES_
 #define _ORDENES_
-
-#define LONG_COMANDO 40
-#define LONG_PARAMETRO 30
 #define LONG_ORDEN 22 //Comando (espacio) Parametros (fin de cadena)
 #define MAX_COMANDOS   35
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
-#include <Global.h>
+
 /***************************** Includes *****************************/
 
 typedef struct 

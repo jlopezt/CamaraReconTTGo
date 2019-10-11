@@ -16,6 +16,8 @@
 #define FRECUENCIA_MQTT          10 //cada cuantas vueltas de loop envia y lee del broker MQTT
 #define FRECUENCIA_ENVIO_DATOS   50 //cada cuantas vueltas de loop envia al broker el estado de E/S
 #define FRECUENCIA_ORDENES        2 //cada cuantas vueltas de loop atiende las ordenes via serie 
+
+#define FRECUENCIA_RECONOCIMIENTO_FACIAL 10 //cada cuantas vueltas de loop lee la imagen para reconocer una cara
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
@@ -23,6 +25,9 @@
 #include <OTA.h>
 #include <Ordenes.h>
 #include <ServidorWeb.h>
+#include <camara.h>
+#include <streaming.h>
+#include <faceREcon.h>
 /***************************** Includes *****************************/
 
 /***************************** variables globales *****************************/
@@ -92,7 +97,15 @@ void setup()
   
   //Camara
   Serial.println("\n\nInit camara ---------------------------------------------------------------------\n");
-  //Camara.inicializacamara();
+  camara_init();
+
+  //Streaming
+  Serial.println("\n\nInit streaming ---------------------------------------------------------------------\n");
+  streaming_init(true);
+
+  //Reconocimiento facial
+  Serial.println("\n\nInit reconocimiento facial ---------------------------------------------------------------------\n");
+  faceRecon_init(true);
   
   //Ordenes serie
   Serial.println("\n\nInit Ordenes ----------------------------------------------------------------------\n");  
@@ -122,6 +135,7 @@ void loop()
   //Prioridad 0: OTA es prioritario.
   if ((vuelta % FRECUENCIA_OTA)==0) gestionaOTA(); //Gestion de actualizacion OTA
   //Prioridad 2: Funciones de control.
+  if ((vuelta % FRECUENCIA_RECONOCIMIENTO_FACIAL)==0) reconocimientoFacial(true); //atiende el servidor web
   //Prioridad 3: Interfaces externos de consulta    
   if ((vuelta % FRECUENCIA_SERVIDOR_WEB)==0) webServer(debugGlobal); //atiende el servidor web
   if ((vuelta % FRECUENCIA_MQTT)==0) miMQTT.atiendeMQTT(debugGlobal);      

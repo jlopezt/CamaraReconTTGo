@@ -40,10 +40,16 @@ date is M10.5.0.
 ******************************************************/
 
 /***************************** Defines *****************************/
+#define MES_CAMBIO_HORARIO_UP   3 //marzo
+#define MES_CAMBIO_HORARIO_DOWN 10 //octubre
+#define DOMINGO 7
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
+#include <Global.h>
 #include <SNTP.h>
+#include <TimeLib.h>  // download from: http://www.arduino.cc/playground/Code/Time
+#include <Time.h>
 /***************************** Includes *****************************/
 
 String Semana[7]={"Lunes","Martes","Miercoles","Jueves","Viernes","Sabado","Domingo"};

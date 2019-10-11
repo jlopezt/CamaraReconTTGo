@@ -7,9 +7,17 @@
 /**********************************************/
 
 /***************************** Defines *****************************/
+#define TRUE 1
+#define FALSE 0
+#define MAX_LONG_NOMBRE_DISPOSITIVO 32
+#define WIFI_PORTAL_TIMEOUT 5*60 //5 minutos en segundos
+#define TIME_OUT 30000
+#define DELAY 1000
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
+//needed for library
+#include <Global.h> //Lo tienen todos los modulos
 #include <RedWiFi.h> 
 /***************************** Includes *****************************/
 

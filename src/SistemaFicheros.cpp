@@ -9,7 +9,10 @@
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
+#include <Global.h>
 #include <SistemaFicheros.h>
+#include <FS.h>     //this needs to be first, or it all crashes and burns...
+#include <SPIFFS.h> //para el ESP32
 /***************************** Includes *****************************/
 
 /************************************************/
