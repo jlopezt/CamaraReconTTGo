@@ -13,7 +13,5 @@
 #include "esp_camera.h"
 /***************************** Includes *****************************/
 
-extern camera_fb_t *fb;
-
 void camara_init(void);
 #endif

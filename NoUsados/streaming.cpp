@@ -30,11 +30,9 @@ static const char* _STREAM_PART = "Content-Type: image/jpeg\r\nContent-Length: %
 
 httpd_handle_t stream_httpd = NULL;
 
-extern  camera_fb_t *fb;
-
 static esp_err_t stream_handler(httpd_req_t *req)
   {
-  //camera_fb_t * fb = NULL;
+  camera_fb_t * fb = NULL;
   esp_err_t res = ESP_OK;
   size_t _jpg_buf_len = 0;
   uint8_t * _jpg_buf = NULL;
@@ -51,7 +49,7 @@ static esp_err_t stream_handler(httpd_req_t *req)
 
   while(true)
     {
-    //fb = esp_camera_fb_get();
+    fb = esp_camera_fb_get();
     if (!fb) 
       {
       Serial.println("Camera capture failed");
@@ -64,8 +62,8 @@ static esp_err_t stream_handler(httpd_req_t *req)
         if(fb->format != PIXFORMAT_JPEG)
           {
           bool jpeg_converted = frame2jpg(fb, 80, &_jpg_buf, &_jpg_buf_len);
-          //esp_camera_fb_return(fb);
-          //fb = NULL;
+          esp_camera_fb_return(fb);
+          fb = NULL;
           if(!jpeg_converted)
             {
             Serial.println("JPEG compression failed");
@@ -91,7 +89,7 @@ static esp_err_t stream_handler(httpd_req_t *req)
           {
           if(!fmt2rgb888(fb->buf, fb->len, fb->format, image_matrix->item))
             {
-            Serial.println("stream_handler-->fmt2rgb888 failed");
+            Serial.println("fmt2rgb888 failed");
             res = ESP_FAIL;
             } 
           else 
@@ -103,8 +101,8 @@ static esp_err_t stream_handler(httpd_req_t *req)
                 Serial.println("fmt2jpg failed");
                 res = ESP_FAIL;
                 }
-              //esp_camera_fb_return(fb);
-              //fb = NULL;
+              esp_camera_fb_return(fb);
+              fb = NULL;
               }
             else 
               {
@@ -135,8 +133,8 @@ static esp_err_t stream_handler(httpd_req_t *req)
         
     if(fb)
       {
-      //esp_camera_fb_return(fb);
-      //fb = NULL;
+      esp_camera_fb_return(fb);
+      fb = NULL;
       _jpg_buf = NULL;
       }
     else if(_jpg_buf)
@@ -151,7 +149,7 @@ static esp_err_t stream_handler(httpd_req_t *req)
     int64_t frame_time = fr_end - last_frame;
     last_frame = fr_end;
     frame_time /= 1000;
-    Serial.printf("MJPG: Tamaño imagen: %uB | Tiempo de procesamiento: %ums (%.1ffps)\n",(uint32_t)(_jpg_buf_len),(uint32_t)frame_time, 1000.0 / (uint32_t)frame_time);
+    Serial.printf("MJPG: %uB %ums (%.1ffps)\n",(uint32_t)(_jpg_buf_len),(uint32_t)frame_time, 1000.0 / (uint32_t)frame_time);
     }
 
   last_frame = 0;
@@ -177,4 +175,4 @@ void streaming_init(boolean debug)
       {
       httpd_register_uri_handler(stream_httpd, &stream_uri);
       }
-   }  
+  }

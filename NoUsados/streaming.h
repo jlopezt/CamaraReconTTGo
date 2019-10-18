@@ -1,18 +1,18 @@
 /**********************************************/
 /*                                            */
-/*      Sistema de reconocimiento facial      */
+/*  Servicio de streaming sobre la camara     */
 /*                                            */
 /**********************************************/
-
 /***************************** Defines *****************************/
-#ifndef _FACERECON_
-#define _FACERECON_
+#ifndef _STREAMING_
+#define _STREAMING_
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
+
 /***************************** Includes *****************************/
-extern camera_fb_t *fb;
-//prototipo de funciones
-void faceRecon_init(boolean debug);
-void reconocimientoFacial(boolean debug);
+
+
+void streaming_init(boolean debug);
+
 #endif

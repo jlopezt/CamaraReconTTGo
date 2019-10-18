@@ -12,7 +12,6 @@
 
 /***************************** Includes *****************************/
 
-
 void streaming_init(boolean debug);
 
 #endif

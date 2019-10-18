@@ -28,6 +28,8 @@ typedef struct
   dl_matrix3d_t *face_id;
 } http_img_process_result;
 
+camera_fb_t *fb = NULL; //Global para todos los modulos que usen la camara. Aqui se llena, el resto solo lee
+
 /**********************************************************/
 /*                                                        */
 /*    configuracion el sistema de reconocimiento facial   */
@@ -72,7 +74,7 @@ static dl_matrix3du_t *aligned_face = NULL;
 /**********************************************************/
 void faceRecon_init(boolean debug)
   {
-  if(debug) Serial.printf("*************Init reconocimiento facial*****************\nEmpezamos...\n");    
+  if(debug) Serial.printf("*************Init reconocimiento facial*****************\n");    
   
   face_id_name_init(&st_face_list, FACE_ID_SAVE_NUMBER, ENROLL_CONFIRM_TIMES);
   aligned_face = dl_matrix3du_alloc(1, FACE_WIDTH, FACE_HEIGHT, 3);
@@ -103,13 +105,19 @@ static inline int do_enrollment(face_id_name_list *face_list, dl_matrix3d_t *new
 /*                                                        */
 /**********************************************************/
 void reconocimientoFacial(boolean debug) 
-  {
+  {    
   if(debug) Serial.printf("*************Reconocimiento facial*****************\nEmpezamos...\n");  
+//camera_fb_t *fb = NULL;
   dl_matrix3du_t *image_matrix = dl_matrix3du_alloc(1, 320, 240, 3);
   http_img_process_result out_res = {0};
   out_res.image = image_matrix->item;
 
   if(debug) Serial.printf("Leo la imagen de la camara\n");
+  if(fb!=NULL) 
+    {
+    esp_camera_fb_return(fb);
+    fb=NULL;
+    }
   fb = esp_camera_fb_get();
 
   out_res.net_boxes = NULL;
@@ -135,7 +143,7 @@ void reconocimientoFacial(boolean debug)
         if (f)
           {
           //cara reconocida  
-          if(debug) Serial.printf("Reconocido %s\n", f->id_name);
+          if(debug || true) Serial.printf("Reconocido %s\n", f->id_name);
           }
         else
           {
@@ -153,6 +161,6 @@ void reconocimientoFacial(boolean debug)
 
   if(debug) Serial.printf("Liberamos y salimos\n");
   dl_matrix3du_free(image_matrix); //void dl_matrix3du_free(dl_matrix3du_t *m); en dl_lib_matrix3d.h
-  esp_camera_fb_return(fb);
-  fb = NULL; 
+  //esp_camera_fb_return(fb);
+  //fb = NULL; 
   }
