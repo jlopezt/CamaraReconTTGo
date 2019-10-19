@@ -13,6 +13,8 @@
 /***************************** Includes *****************************/
 extern camera_fb_t *fb;
 //prototipo de funciones
+void streaming_init(boolean debug);
+
 void faceRecon_init(boolean debug);
 void reconocimientoFacial(boolean debug);
 #endif

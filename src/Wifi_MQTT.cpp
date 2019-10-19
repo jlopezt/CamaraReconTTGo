@@ -201,7 +201,7 @@ boolean miMQTTClass::enviarMQTT(String topic, String payload)
   if (clienteMQTT.connected()) 
     {
     String topicCompleto=topicRoot+"/"+ID_MQTT+"/"+topic;  
-    //Serial.printf("Enviando:\ntopic:  %s | payload: %s\n",topicCompleto.c_str(),payload.c_str());
+    Serial.printf("Enviando:\ntopic:  %s | payload: %s\n",topicCompleto.c_str(),payload.c_str());
   
     if(clienteMQTT.beginPublish(topicCompleto.c_str(), payload.length(), false))//boolean beginPublish(const char* topic, unsigned int plength, boolean retained)
       {

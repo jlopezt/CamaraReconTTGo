@@ -26,7 +26,7 @@
 #include <Ordenes.h>
 #include <ServidorWeb.h>
 #include <camara.h>
-#include <streaming.h>
+//#include <streaming.h>
 #include <faceREcon.h>
 /***************************** Includes *****************************/
 
