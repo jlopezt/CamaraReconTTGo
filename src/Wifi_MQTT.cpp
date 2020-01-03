@@ -68,7 +68,8 @@ boolean miMQTTClass::recuperaDatosMQTT(boolean debug)
     Serial.printf("No existe fichero de configuracion MQTT\n");
     //cad="{\"IPBroker\": \"10.68.1.100\", \"puerto\": 1883, \"usuarioMQTT\": \"usuario\", \"passwordMQTT\": \"password\",  \"ID_MQTT\": \"garaje32/puerta\",  \"topicRoot\":  \"casa\",  \"keepAlive\": 0, \"publicarEntradas\": 1, \"publicarSalidas\": 0}";
     cad="{\"IPBroker\": \"0.0.0.0\", \"puerto\": 1883, \"usuarioMQTT\": \"usuario\", \"passwordMQTT\": \"password\",  \"ID_MQTT\": \"" + String(NOMBRE_FAMILIA) + "\",  \"topicRoot\":  \"" + NOMBRE_FAMILIA + "\",  \"keepAlive\": 0, \"publicarEntradas\": 0, \"publicarSalidas\": 0}";
-    if(SistemaFicheros.salvaFicheroConfig(MQTT_CONFIG_FILE, MQTT_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion MQTT creado por defecto\n");    
+    //salvo la config por defecto
+    //if(SistemaFicheros.salvaFicheroConfig(MQTT_CONFIG_FILE, MQTT_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion MQTT creado por defecto\n");    
     }
 
   return parseaConfiguracionMQTT(cad);

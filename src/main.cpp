@@ -39,6 +39,7 @@ boolean candado=false; //Candado de configuracion. true implica que la ultima co
 void setup()
   {
   Serial.begin(115200);
+      pinMode(4,OUTPUT);
   Serial.printf("\n\n\n");
   Serial.printf("*************** %s ***************\n",NOMBRE_FAMILIA);
   Serial.printf("*************** %s ***************\n",VERSION);
@@ -102,6 +103,10 @@ void setup()
   //Streaming
   Serial.println("\n\nInit streaming ---------------------------------------------------------------------\n");
   streaming_init(true);
+  
+  //Websocket
+  Serial.println("\n\nInit websocket ---------------------------------------------------------------------\n");  
+  //WebSocket_init(true);
 
   //Reconocimiento facial
   Serial.println("\n\nInit reconocimiento facial ---------------------------------------------------------------------\n");

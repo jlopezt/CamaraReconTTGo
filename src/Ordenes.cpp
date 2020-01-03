@@ -50,6 +50,10 @@ void func_comando_reloj(int iParametro, char* sParametro, float fParametro); //r
 //MQTT
 void func_comando_enviarKeepAlive(int iParametro, char* sParametro, float fParametro); //debug
 void func_comando_MQTTConfig(int iParametro, char* sParametro, float fParametro); //debug
+//Camara AI
+void func_comando_flash(int iParametro, char* sParametro, float fParametro); //debug
+void func_comando_ledRojo(int iParametro, char* sParametro, float fParametro); //debug
+
 
 OrdenesClass::OrdenesClass(void) {}
 
@@ -249,6 +253,15 @@ void OrdenesClass::inicializaOrden(void)
   comandos[i].comando="MQTTConfig";
   comandos[i].descripcion="Configuración de MQTT";
   comandos[i++].p_func_comando=func_comando_MQTTConfig;
+
+  //Camara AI
+  comandos[i].comando="flash";
+  comandos[i].descripcion="Encendido/Apagado del flash";
+  comandos[i++].p_func_comando=func_comando_flash;
+
+  comandos[i].comando="led";
+  comandos[i].descripcion="Encendido/apagado del led incorporado";
+  comandos[i++].p_func_comando=func_comando_ledRojo;
 
     //resto
   for(;i<MAX_COMANDOS;)
@@ -456,4 +469,25 @@ void func_comando_MQTTConfig(int iParametro, char* sParametro, float fParametro)
   {
   Serial.printf("Configuracion leida:\nID MQTT: %s\nIP broker: %s\nIP Puerto del broker: %i\nUsuario: %s\nPassword: %s\nTopic root: %s\nEnviar KeepAlive: %i\nPublicar entradas: %i\nPublicar salidas: %i\nWill topic: %s\nWill msg: %s\nCelan session: %i\n",miMQTT.getID_MQTT().c_str(),miMQTT.getIPBroker().toString().c_str(),miMQTT.getPuertoBroker(),miMQTT.getUsuarioMQTT().c_str(),miMQTT.getPasswordMQTT().c_str(),miMQTT.gettopicRoot().c_str(),miMQTT.getEnviarKeepAlive(),miMQTT.getPublicarEntradas(),miMQTT.getPublicarSalidas(),(miMQTT.gettopicRoot()+"/"+String(WILL_TOPIC)).c_str(),WILL_MSG, (CLEAN_SESSION?1:0));
   }  
+
+void func_comando_flash(int iParametro, char* sParametro, float fParametro)
+  {
+  if(iParametro==1) 
+    {
+    digitalWrite(4,HIGH);
+    Serial.printf("Pin 4 puesto a %i\n",iParametro);
+    }
+  else 
+    {
+    digitalWrite(4,LOW);
+    Serial.println("Pin 4 puesto a LOW");
+    } 
+  }
+
+void func_comando_ledRojo(int iParametro, char* sParametro, float fParametro)
+  {
+  if(iParametro==1) digitalWrite(33,HIGH);
+  else digitalWrite(33,LOW);
+  }
+
 /***************************** FIN funciones para comandos ******************************************/ 

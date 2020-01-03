@@ -3,7 +3,7 @@
 "puerto": 1883, 
 "usuarioMQTT": "usuario", 
 "passwordMQTT": "password", 
-"ID_MQTT": "garaje32/puerta", 
+"ID_MQTT": "puerta/camara", 
 "topicRoot": "casa", 
 "keepAlive": 0,
 "publicarEntradas": 1,

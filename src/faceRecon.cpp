@@ -7,8 +7,19 @@
 /**********************************************/
 
 /***************************** Defines *****************************/
+//FAce reocn
 #define ENROLL_CONFIRM_TIMES 5
 #define FACE_ID_SAVE_NUMBER 7
+
+//Streamming
+#define PART_BOUNDARY "123456789000000000000987654321"
+//Configuracion del puerto para streaming
+#define PUERTO_STREAMING  81
+
+//WebSockets
+#define PUERTO_WEBSOCKET  88
+#define INDEX_HTML "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>ESP32 Captura de caras con nombre<\title><\head><body>VACIO<\body><\html>"
+#define INDEX_HTML_FILE                 "/web/index.html"
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
@@ -19,8 +30,19 @@
 #include "fr_forward.h"
 #include "fr_flash.h"
 #include "camara.h"
+
+//Adicionales por Streamming
+#include "esp_http_server.h"
+#include "esp_timer.h"
+#include "img_converters.h"
+
+#include "fb_gfx.h"
+
+//Adicionales por WebSockets
+#include <ArduinoWebsockets.h>
 /***************************** Includes *****************************/
 
+/********************** Face recon **********************/
 typedef struct
 {
   uint8_t *image;
@@ -66,6 +88,48 @@ typedef struct
 */
 face_id_name_list st_face_list;
 static dl_matrix3du_t *aligned_face = NULL;
+
+/********************** Streamming **********************/
+//Variables del modulo
+static const char* _STREAM_CONTENT_TYPE = "multipart/x-mixed-replace;boundary=" PART_BOUNDARY;
+static const char* _STREAM_BOUNDARY = "\r\n--" PART_BOUNDARY "\r\n";
+static const char* _STREAM_PART = "Content-Type: image/jpeg\r\nContent-Length: %u\r\n\r\n";
+
+httpd_handle_t stream_httpd = NULL;
+
+//*******Recupero la pagina inicial***********   
+extern const unsigned char index_html_zip_start[] asm("_binary_src_www_index_html_zip_start");
+extern const unsigned char index_html_zip_end[]   asm("_binary_src_www_index_html_zip_end");
+size_t index_html_zip_len;
+
+camera_fb_t *xfb;
+
+/********************** Websockets **********************/
+char paginaWS[6128]="";
+
+using namespace websockets;
+WebsocketsServer socket_server;
+//WebsocketsClient &client=&WebsocketsClient();
+
+typedef enum
+{
+  START_STREAM,
+  START_DETECT,
+  SHOW_FACES,
+  START_RECOGNITION,
+  START_ENROLL,
+  ENROLL_COMPLETE,
+  DELETE_ALL,
+} en_fsm_state;
+en_fsm_state g_state;
+
+typedef struct
+{
+  char enroll_name[ENROLL_NAME_LEN];
+} httpd_resp_value;
+
+httpd_resp_value st_name;
+/********************************************************************************************************/
 
 /**********************************************************/
 /*                                                        */
@@ -131,8 +195,7 @@ void reconocimientoFacial(boolean debug)
   http_img_process_result out_res = {0};
   out_res.image = image_matrix->item;
 
-  Serial.print("Face recon executed on core ");
-  Serial.println(xPortGetCoreID());
+  if(debug) Serial.printf("reconocimientoFacial() ejecutado en el core %i\n",xPortGetCoreID());
 
   if(debug) Serial.printf("Leo la imagen de la camara\n");
   if(fb!=NULL) 
@@ -200,36 +263,13 @@ void reconocimientoFacial(boolean debug)
 /*                                            */
 /**********************************************/
 
-/***************************** Defines *****************************/
-#define PART_BOUNDARY "123456789000000000000987654321"
-//Configuracion del puerto para streaming
-#define PUERTO_STREAMING  81
-/***************************** Defines *****************************/
-
-/***************************** Includes *****************************/
-#include <Global.h> //Lo tienen todos los modulos
-//#include <streaming.h>
-#include "esp_http_server.h"
-#include "esp_timer.h"
-#include "esp_camera.h"
-#include "img_converters.h"
-#include "Arduino.h"
-
-#include "fb_gfx.h"
-#include "fd_forward.h"
-/***************************** Includes *****************************/
-
-//Variables del modulo
-static const char* _STREAM_CONTENT_TYPE = "multipart/x-mixed-replace;boundary=" PART_BOUNDARY;
-static const char* _STREAM_BOUNDARY = "\r\n--" PART_BOUNDARY "\r\n";
-static const char* _STREAM_PART = "Content-Type: image/jpeg\r\nContent-Length: %u\r\n\r\n";
-
-httpd_handle_t stream_httpd = NULL;
-
-camera_fb_t *xfb;
-
 static esp_err_t stream_handler(httpd_req_t *req)
-  {
+  {  
+  httpd_resp_set_type(req, "text/html");
+  httpd_resp_set_hdr(req, "Content-Encoding", "utf8");
+  return httpd_resp_send(req, (const char *)index_html_zip_start, index_html_zip_len);
+/*******************/
+
   esp_err_t res = ESP_OK;
   size_t _jpg_buf_len = 0;
   uint8_t * _jpg_buf = NULL;
@@ -296,49 +336,25 @@ void streaming_init(boolean debug)
     .handler   = stream_handler,
     .user_ctx  = NULL
     };
+
+  //Calculo la longitud de la pagina principal   
+  index_html_zip_len = index_html_zip_end - index_html_zip_start;
     
-    config.server_port = PUERTO_STREAMING;
-    config.ctrl_port += 1;
-    Serial.printf("Servicio de streaming iniciado en el puerto: '%d'\n", config.server_port);
-    if (httpd_start(&stream_httpd, &config) == ESP_OK) 
-      {
-      httpd_register_uri_handler(stream_httpd, &stream_uri);
-      }
+  config.server_port = PUERTO_STREAMING;
+  config.ctrl_port += 1;
+  Serial.printf("Servicio de streaming iniciado en el puerto: '%d'\n", config.server_port);
+  if (httpd_start(&stream_httpd, &config) == ESP_OK) 
+    {
+    httpd_register_uri_handler(stream_httpd, &stream_uri);
+    }
    }  
 
 /*********************************** Inicio WebSocket *****************************************************************/
 /**********************************************/
 /*                                            */
-/*  Servicio de streaming sobre la camara     */
+/*Funciones auxiliares y gestion de Websockets*/
 /*                                            */
 /**********************************************/
-
-/***************************** Defines *****************************/
-#define PUERTO_WEBSOCKET  82
-#define INDEX_HTML ""
-/***************************** Defines *****************************/
-
-/***************************** Includes *****************************/ 
-#include <ArduinoWebsockets.h>
-/***************************** Includes *****************************/ 
-/*
-String paginaWS="";
-
-using namespace websockets;
-WebsocketsServer socket_server;
-WebsocketsClient &client=NULL;
-
-typedef enum
-{
-  START_STREAM,
-  START_DETECT,
-  SHOW_FACES,
-  START_RECOGNITION,
-  START_ENROLL,
-  ENROLL_COMPLETE,
-  DELETE_ALL,
-} en_fsm_state;
-en_fsm_state g_state;
 
 void app_facenet_main()
 {
@@ -347,6 +363,7 @@ void app_facenet_main()
   read_face_id_from_flash_with_name(&st_face_list);
 }
 
+/********************************
 static inline int do_enrollment(face_id_name_list *face_list, dl_matrix3d_t *new_id)
 {
   ESP_LOGD(TAG, "START ENROLLING");
@@ -356,6 +373,7 @@ static inline int do_enrollment(face_id_name_list *face_list, dl_matrix3d_t *new
            ENROLL_CONFIRM_TIMES - left_sample_face);
   return left_sample_face;
 }
+*******************************/
 
 static esp_err_t send_face_list(WebsocketsClient &client)
 {
@@ -408,14 +426,15 @@ void handle_message(WebsocketsClient &client, WebsocketsMessage msg)
   }
 }
 
-void inicializaWebServer(void)
+void WebSocket_init(boolean debug)
   {
-  //*******Recupero la pagina inicial***********   
-  if(!SistemaFicheros.leeFicheroConfig(INDEX_HTML, paginaWS)) paginaWS=INDEX_HTML;
-
   //*******Configuracion del WS server***********
+  if (debug) Serial.printf("Levantamos el servidor de websockets en el puerto %i\n", PUERTO_WEBSOCKET);
   socket_server.listen(PUERTO_WEBSOCKET);
-  client = socket_server.accept();
+  if (debug) Serial.printf("Cliente aceptando mensajes...\n");
+  auto client = socket_server.accept();
+  if (debug) Serial.printf("Asignado gestor de mensajes\n");
   client.onMessage(handle_message);
+  if (debug) Serial.printf("Finalizado\n");  
   }
-*********************************** Fin WebSocket ********************************************************************/   
+/*********************************** Fin WebSocket ********************************************************************/   
