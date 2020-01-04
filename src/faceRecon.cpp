@@ -7,7 +7,7 @@
 /**********************************************/
 
 /***************************** Defines *****************************/
-//FAce reocn
+//Face reocn
 #define ENROLL_CONFIRM_TIMES 5
 #define FACE_ID_SAVE_NUMBER 7
 
@@ -18,6 +18,7 @@
 
 //WebSockets
 #define PUERTO_WEBSOCKET  88
+#define NOT_CONNECTED     -1
 #define INDEX_HTML "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>ESP32 Captura de caras con nombre<\title><\head><body>VACIO<\body><\html>"
 #define INDEX_HTML_FILE                 "/web/index.html"
 /***************************** Defines *****************************/
@@ -39,18 +40,32 @@
 #include "fb_gfx.h"
 
 //Adicionales por WebSockets
-#include <ArduinoWebsockets.h>
+//#include <ArduinoWebsockets.h>
+#include <WebSocketsServer.h>
 /***************************** Includes *****************************/
 
 /********************** Face recon **********************/
+extern camera_fb_t *fb;
+
+static void send_face_list(void);
+boolean enviarWSTXT(String mensaje);
+
 typedef struct
-{
+  {
   uint8_t *image;
   box_array_t *net_boxes;
   dl_matrix3d_t *face_id;
-} http_img_process_result;
+  } http_img_process_result;
 
 camera_fb_t *fb = NULL; //Global para todos los modulos que usen la camara. Aqui se llena, el resto solo lee
+//websockets
+WebSocketsServer webSocket = WebSocketsServer(PUERTO_WEBSOCKET);
+typedef struct
+  {
+  uint8_t id=NOT_CONNECTED;//No hay cliuente conectado
+  IPAddress IP={0,0,0,0};
+  }cliente_t;
+cliente_t cliente;
 
 /**********************************************************/
 /*                                                        */
@@ -89,12 +104,6 @@ typedef struct
 face_id_name_list st_face_list;
 static dl_matrix3du_t *aligned_face = NULL;
 
-/********************** Streamming **********************/
-//Variables del modulo
-static const char* _STREAM_CONTENT_TYPE = "multipart/x-mixed-replace;boundary=" PART_BOUNDARY;
-static const char* _STREAM_BOUNDARY = "\r\n--" PART_BOUNDARY "\r\n";
-static const char* _STREAM_PART = "Content-Type: image/jpeg\r\nContent-Length: %u\r\n\r\n";
-
 httpd_handle_t stream_httpd = NULL;
 
 //*******Recupero la pagina inicial***********   
@@ -104,15 +113,9 @@ size_t index_html_zip_len;
 
 camera_fb_t *xfb;
 
-/********************** Websockets **********************/
-char paginaWS[6128]="";
-
-using namespace websockets;
-WebsocketsServer socket_server;
-//WebsocketsClient &client=&WebsocketsClient();
-
 typedef enum
 {
+  DISCONNECT,
   START_STREAM,
   START_DETECT,
   SHOW_FACES,
@@ -121,7 +124,7 @@ typedef enum
   ENROLL_COMPLETE,
   DELETE_ALL,
 } en_fsm_state;
-en_fsm_state g_state;
+en_fsm_state g_state=DISCONNECT;
 
 typedef struct
 {
@@ -131,6 +134,7 @@ typedef struct
 httpd_resp_value st_name;
 /********************************************************************************************************/
 
+/***************************************Inicio reconocimiento*****************************************************************/
 /**********************************************************/
 /*                                                        */
 /*     inicializa el sistema de reconocimiento facial     */
@@ -139,31 +143,25 @@ httpd_resp_value st_name;
 void faceRecon_init(boolean debug)
   {
   if(debug) Serial.printf("*************Init reconocimiento facial*****************\n");    
-  
+  g_state=DISCONNECT;
+
+  //carga la lista de caras
   face_id_name_init(&st_face_list, FACE_ID_SAVE_NUMBER, ENROLL_CONFIRM_TIMES);
   aligned_face = dl_matrix3du_alloc(1, FACE_WIDTH, FACE_HEIGHT, 3);
   read_face_id_from_flash_with_name(&st_face_list);
-  if(debug) Serial.printf("Leidas %i caras\n", st_face_list.count);    
-  }
 
-/**********************************************************/
-/*                                                        */
-/*     Incluye una nueva cara al la lista de conocidas    */
-/*                                                        */
-/**********************************************************/
-static inline int do_enrollment(face_id_name_list *face_list, dl_matrix3d_t *new_id, char enroll_name[ENROLL_NAME_LEN])
-  {
-  ESP_LOGD(TAG, "START ENROLLING");
-  int left_sample_face = enroll_face_id_to_flash_with_name(face_list, new_id, enroll_name);
-  ESP_LOGD(TAG, "Face ID %s Enrollment: Sample %d",
-           st_name.enroll_name,
-           ENROLL_CONFIRM_TIMES - left_sample_face);
-  return left_sample_face;
+  if(debug) Serial.printf("Leidas %i caras\n", st_face_list.count);  
+  face_id_node *head = st_face_list.head;
+  for (int i = 0; i < st_face_list.count; i++) // loop current faces
+    {
+    Serial.printf("cara[%i] nombre: %s\n",i,head->id_name);
+    head = head->next;
+    }
   }
 
 /******************************************************/
 /*                                                    */
-/* Envia el mensake de cara reconocida mediante MQTT  */ 
+/* Envia el mensaje de cara reconocida mediante MQTT  */ 
 /* boolean enviarMQTT(String topic, String payload);  */
 /******************************************************/
 int caraReconocida(String nombre)
@@ -190,7 +188,6 @@ int caraReconocida(String nombre)
 void reconocimientoFacial(boolean debug) 
   {    
   if(debug) Serial.printf("*************Reconocimiento facial*****************\nEmpezamos...\n");  
-//camera_fb_t *fb = NULL;
   dl_matrix3du_t *image_matrix = dl_matrix3du_alloc(1, 320, 240, 3);
   http_img_process_result out_res = {0};
   out_res.image = image_matrix->item;
@@ -222,22 +219,45 @@ void reconocimientoFacial(boolean debug)
       //Se ha detectado una cara
       if(debug) Serial.printf("Hay una cara\n");
       out_res.face_id = get_face_id(aligned_face);////////DA CORE
-
-      if (st_face_list.count > 0)
+/***************************************************************/
+      if (g_state == START_ENROLL)
         {
-        face_id_node *f = recognize_face_with_name(&st_face_list, out_res.face_id);
-        if (f)
+        int left_sample_face = enroll_face_id_to_flash_with_name(&st_face_list, out_res.face_id, st_name.enroll_name);
+        char enrolling_message[64];
+        sprintf(enrolling_message, "SAMPLE NUMBER %d FOR %s", ENROLL_CONFIRM_TIMES - left_sample_face, st_name.enroll_name);
+        enviarWSTXT(enrolling_message);
+
+        if (left_sample_face == 0)
           {
-          //cara reconocida  
-          if(debug || true) Serial.printf("Reconocido %s\n", f->id_name);
-          caraReconocida(f->id_name);
-          }
-        else
-          {
-          //cara no reconocida 
-          if(debug) Serial.printf("Cara no reconocida\n"); 
+          ESP_LOGI(TAG, "Enrolled Face ID: %s", st_face_list.tail->id_name);
+          g_state = START_STREAM;
+          char captured_message[64];
+          sprintf(captured_message, "FACE CAPTURED FOR %s", st_face_list.tail->id_name);
+          enviarWSTXT(captured_message);
+          send_face_list();
           }
         }
+/***************************************************************/
+      else
+        {     
+        if (st_face_list.count > 0)
+          {
+          face_id_node *f = recognize_face_with_name(&st_face_list, out_res.face_id);
+          if (f)
+            {
+            //cara reconocida  
+            if(debug || true) Serial.printf("Reconocido %s\n", f->id_name);
+            enviarWSTXT("RECOGNISING");
+            caraReconocida(f->id_name);
+            }
+          else
+            {
+            //cara no reconocida 
+            if(debug) Serial.printf("Cara no reconocida\n"); 
+            }
+          }
+        }
+/***************************************************************/
       dl_matrix3d_free(out_res.face_id);
       }
     }
@@ -245,109 +265,19 @@ void reconocimientoFacial(boolean debug)
     {
     //No se ha detectado cara  
     }
+  
+  //Si esta en modo streamming
+  if (g_state == START_STREAM && cliente.id!=NOT_CONNECTED) 
+    {
+    //Serial.println("Enviando imagen cliente: %i tamaño:%i",cliente.id,fb->len);
+    if(cliente.id!=NOT_CONNECTED) webSocket.sendBIN(cliente.id, (const uint8_t *)fb->buf, fb->len);
+    }
 
   if(debug) Serial.printf("Liberamos y salimos\n");
   dl_matrix3du_free(image_matrix); //void dl_matrix3du_free(dl_matrix3du_t *m); en dl_lib_matrix3d.h
-  //esp_camera_fb_return(fb);
-  //fb = NULL; 
-  } 
-
-
-
-/********************************************************************************************************************************************/
-
-
-/**********************************************/
-/*                                            */
-/*  Servicio de streaming sobre la camara     */
-/*                                            */
-/**********************************************/
-
-static esp_err_t stream_handler(httpd_req_t *req)
-  {  
-  httpd_resp_set_type(req, "text/html");
-  httpd_resp_set_hdr(req, "Content-Encoding", "utf8");
-  return httpd_resp_send(req, (const char *)index_html_zip_start, index_html_zip_len);
-/*******************/
-
-  esp_err_t res = ESP_OK;
-  size_t _jpg_buf_len = 0;
-  uint8_t * _jpg_buf = NULL;
-  char * part_buf[64];
-
-  static int64_t last_frame = 0;
-  if(!last_frame) last_frame = esp_timer_get_time();
-
-  res = httpd_resp_set_type(req, _STREAM_CONTENT_TYPE);
-  if(res != ESP_OK) return res;
-
-  httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
-
-  Serial.print("stream_handler executed on core ");
-  Serial.println(xPortGetCoreID());
-
-  while(true)
-    {
-    xfb = esp_camera_fb_get();
-    _jpg_buf = xfb->buf;
-    _jpg_buf_len = xfb->len;
-
-    if(res == ESP_OK)
-      {
-      size_t hlen = snprintf((char *)part_buf, 64, _STREAM_PART, _jpg_buf_len);
-      res = httpd_resp_send_chunk(req, (const char *)part_buf, hlen);
-      }
-        
-    if(res == ESP_OK)
-      {
-      res = httpd_resp_send_chunk(req, (const char *)_jpg_buf, _jpg_buf_len);
-      }
-        
-    if(res == ESP_OK)
-      {
-      res = httpd_resp_send_chunk(req, _STREAM_BOUNDARY, strlen(_STREAM_BOUNDARY));
-      }
-
-    esp_camera_fb_return(xfb);
-    xfb=NULL;
-    delay(100);
-        
-    if(res != ESP_OK) break;
-      
-    int64_t fr_end = esp_timer_get_time();     
-    int64_t frame_time = fr_end - last_frame;
-    last_frame = fr_end;
-    frame_time /= 1000;
-    if (debugGlobal) Serial.printf("MJPG: Tamaño imagen: %uB | Tiempo de procesamiento: %ums (%.1ffps)\n",(uint32_t)(_jpg_buf_len),(uint32_t)frame_time, 1000.0 / (uint32_t)frame_time);
-    }
-
-  last_frame = 0;
-  return res;
   }
-
-void streaming_init(boolean debug)
-  {
-  httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-
-  httpd_uri_t stream_uri = 
-    {
-    .uri       = "/",
-    .method    = HTTP_GET,
-    .handler   = stream_handler,
-    .user_ctx  = NULL
-    };
-
-  //Calculo la longitud de la pagina principal   
-  index_html_zip_len = index_html_zip_end - index_html_zip_start;
-    
-  config.server_port = PUERTO_STREAMING;
-  config.ctrl_port += 1;
-  Serial.printf("Servicio de streaming iniciado en el puerto: '%d'\n", config.server_port);
-  if (httpd_start(&stream_httpd, &config) == ESP_OK) 
-    {
-    httpd_register_uri_handler(stream_httpd, &stream_uri);
-    }
-   }  
+ 
+/*********************************** Fin reconocimiento****************************************************************/
 
 /*********************************** Inicio WebSocket *****************************************************************/
 /**********************************************/
@@ -356,85 +286,190 @@ void streaming_init(boolean debug)
 /*                                            */
 /**********************************************/
 
-void app_facenet_main()
-{
-  face_id_name_init(&st_face_list, FACE_ID_SAVE_NUMBER, ENROLL_CONFIRM_TIMES);
-  aligned_face = dl_matrix3du_alloc(1, FACE_WIDTH, FACE_HEIGHT, 3);
-  read_face_id_from_flash_with_name(&st_face_list);
-}
-
-/********************************
-static inline int do_enrollment(face_id_name_list *face_list, dl_matrix3d_t *new_id)
-{
-  ESP_LOGD(TAG, "START ENROLLING");
-  int left_sample_face = enroll_face_id_to_flash_with_name(face_list, new_id, st_name.enroll_name);
-  ESP_LOGD(TAG, "Face ID %s Enrollment: Sample %d",
-           st_name.enroll_name,
-           ENROLL_CONFIRM_TIMES - left_sample_face);
-  return left_sample_face;
-}
-*******************************/
-
-static esp_err_t send_face_list(WebsocketsClient &client)
-{
-  client.send("delete_faces"); // tell browser to delete all faces
+/**********************************************/
+/*                                            */
+/*  Envia la lista de caras por websockets    */
+/*                                            */
+/**********************************************/
+static void send_face_list(void)
+  {
+  enviarWSTXT("delete_faces"); // tell browser to delete all faces
+  Serial.println("Enviado delete_faces");
   face_id_node *head = st_face_list.head;
   char add_face[64];
   for (int i = 0; i < st_face_list.count; i++) // loop current faces
-  {
+    {
+    Serial.printf("Enviado listface:%s\n",head->id_name);
     sprintf(add_face, "listface:%s", head->id_name);
-    client.send(add_face); //send face to browser
+    enviarWSTXT(add_face); //send face to browser
     head = head->next;
+    }
   }
-}
 
-static esp_err_t delete_all_faces(WebsocketsClient &client)
-{
+/**********************************************/
+/*                                            */
+/*       Borra la lista de caras              */
+/*                                            */
+/**********************************************/
+void delete_all_faces(void)
+  {
   delete_face_all_in_flash_with_name(&st_face_list);
-  client.send("delete_faces");
-}
+  enviarWSTXT("delete_faces");
+  Serial.println("Enviado delete_faces");
+  }
 
-void handle_message(WebsocketsClient &client, WebsocketsMessage msg)
-{
-  if (msg.data() == "stream") {
+/**********************************************/
+/*                                            */
+/*   Gestiona los mensajes recibidos por WS   */
+/*                                            */
+/**********************************************/
+void gestionaMensajes(uint8_t cliente, String mensaje) //Tiene que implementar la maquina equivalente a la del loop de ESP-WHO. En funcion de g_state
+  {
+  Serial.printf("Procesando mensaje %s de %i\n",mensaje.c_str(),cliente);
+	if(mensaje== "stream") 
+		{
     g_state = START_STREAM;
-    client.send("STREAMING");
-  }
-  if (msg.data() == "detect") {
+    webSocket.sendTXT(cliente, "STREAMING");
+    Serial.println("Enviado STREAMING");
+ 	  }
+
+	if(mensaje== "detect") 
+		{
     g_state = START_DETECT;
-    client.send("DETECTING");
-  }
-  if (msg.data().substring(0, 8) == "capture:") {
+    webSocket.sendTXT(cliente, "DETECTING");
+    Serial.println("Enviado DETECTING");
+ 	  }
+
+	if(mensaje.substring(0, 8) == "capture:") 
+		{
     g_state = START_ENROLL;
     char person[FACE_ID_SAVE_NUMBER * ENROLL_NAME_LEN] = {0,};
-    msg.data().substring(8).toCharArray(person, sizeof(person));
-    memcpy(st_name.enroll_name, person, strlen(person) + 1);
-    client.send("CAPTURING");
-  }
-  if (msg.data() == "recognise") {
+    mensaje.substring(8).toCharArray(person, sizeof(person));
+    memcpy(st_name.enroll_name, person, strlen(person) + 1);    
+    webSocket.sendTXT(cliente, "CAPTURING");
+    Serial.println("Enviado CAPTURING");
+ 	  }
+
+	if(mensaje== "recognise") 
+		{
     g_state = START_RECOGNITION;
-    client.send("RECOGNISING");
-  }
-  if (msg.data().substring(0, 7) == "remove:") {
+    webSocket.sendTXT(cliente, "RECOGNISING");
+    Serial.println("Enviado RECOGNISING");
+ 	  }
+
+
+	if(mensaje.substring(0, 7) == "remove:") 
+		{
     char person[ENROLL_NAME_LEN * FACE_ID_SAVE_NUMBER];
-    msg.data().substring(7).toCharArray(person, sizeof(person));
+    mensaje.substring(7).toCharArray(person, sizeof(person));
     delete_face_id_in_flash_with_name(&st_face_list, person);
-    send_face_list(client); // reset faces in the browser
+    Serial.println("Enviado nueva lista de caras");
+    send_face_list(); // reset faces in the browser
+ 	  }
+
+  if (mensaje == "delete_all") 
+  	{
+    Serial.println("Borrando caras");
+    delete_all_faces();
+	  }
   }
-  if (msg.data() == "delete_all") {
-    delete_all_faces(client);
+
+/**********************************************/
+/*                                            */
+/*   Trasnforma un mensaje hexadecimal en     */
+/*   texto imprimible en pantalla             */
+/*                                            */
+/**********************************************/
+void hexdump(const void *mem, uint32_t len, uint8_t cols = 16) 
+  {
+	const uint8_t* src = (const uint8_t*) mem;
+	Serial.printf("\n[HEXDUMP] Address: 0x%08X len: 0x%X (%d)", (ptrdiff_t)src, len, len);
+	for(uint32_t i = 0; i < len; i++) 
+    {
+		if(i % cols == 0) 
+      {
+			Serial.printf("\n[0x%08X] 0x%08X: ", (ptrdiff_t)src, i);
+		  }
+		Serial.printf("%02X ", *src);
+		src++;
+	  }
+	Serial.printf("\n");
   }
-}
+
+void webSocketEvent(uint8_t clienteId, WStype_t type, uint8_t * payload, size_t length) 
+  {
+  switch(type) 
+    {
+    case WStype_DISCONNECTED:
+        Serial.printf("[%u] Desconectado\n", clienteId);
+        cliente.id=NOT_CONNECTED;//Se ha Desconectado
+        cliente.IP={0,0,0,0};
+        break;
+    case WStype_CONNECTED:
+        {
+        IPAddress ip = webSocket.remoteIP(clienteId);
+        Serial.printf("[%u] Connectado desde IP %d.%d.%d.%d url: %s\n", clienteId, ip[0], ip[1], ip[2], ip[3], payload);
+        //Nuevo cliente conectado
+        cliente.id=clienteId;
+        cliente.IP=ip;
+
+        //Lo paso al estado inicial
+        send_face_list();
+        //gestionaMensajes(clienteId,"stream");
+        }
+        break;
+    case WStype_TEXT:
+        {
+        String datos="";
+        for(uint8_t i=0;i<length;i++) datos+=(char)payload[i];
+
+        Serial.printf("[%u] envia el texto: %s | datos: %s\n", clienteId, payload,datos.c_str());
+        gestionaMensajes(clienteId,datos);
+        }
+        break;
+    case WStype_BIN:
+        Serial.printf("[%u] enviadatos bynarios length: %u\n", clienteId, length);
+        hexdump(payload, length);
+
+        // send message to client
+        // webSocket.sendBIN(num, payload, length);
+        break;
+		case WStype_ERROR:			
+		case WStype_FRAGMENT_TEXT_START:
+		case WStype_FRAGMENT_BIN_START:
+		case WStype_FRAGMENT:
+		case WStype_FRAGMENT_FIN:
+    case WStype_PING:
+    case WStype_PONG:
+			break;
+    }
+  }
 
 void WebSocket_init(boolean debug)
   {
+  //Inicializo la estructura de cliente
+  cliente.id=NOT_CONNECTED;
+  cliente.IP={0,0,0,0};
+
   //*******Configuracion del WS server***********
-  if (debug) Serial.printf("Levantamos el servidor de websockets en el puerto %i\n", PUERTO_WEBSOCKET);
-  socket_server.listen(PUERTO_WEBSOCKET);
-  if (debug) Serial.printf("Cliente aceptando mensajes...\n");
-  auto client = socket_server.accept();
+  if (debug) Serial.printf("Iniciamos el servidor de websockets\n");
+  webSocket.begin();
   if (debug) Serial.printf("Asignado gestor de mensajes\n");
-  client.onMessage(handle_message);
+  webSocket.onEvent(webSocketEvent);
   if (debug) Serial.printf("Finalizado\n");  
+  }
+
+boolean enviarWSTXT(String mensaje)
+  {
+  boolean salida=false;  
+  if(cliente.id!=NOT_CONNECTED) salida=webSocket.sendTXT(cliente.id, (const uint8_t *)mensaje.c_str());
+  if (salida) Serial.println(mensaje);
+  else Serial.printf("Error en el envio de %s\n",mensaje.c_str());
+  return salida;
+  }
+
+void atiendeWebsocket(void)
+  {
+  webSocket.loop();  
   }
 /*********************************** Fin WebSocket ********************************************************************/   

@@ -22,6 +22,7 @@
 #include <SPIFFS.h>
 #include <Ordenes.h>
 #include <inttypes.h>
+#include <faceRecon.h>
 /***************************** Includes *****************************/
 
 //Declaracion de las funciones de comando
@@ -48,11 +49,12 @@ void func_comando_minuto(int iParametro, char* sParametro, float fParametro); //
 void func_comando_segundo(int iParametro, char* sParametro, float fParametro); //segundo"
 void func_comando_reloj(int iParametro, char* sParametro, float fParametro); //reloj 
 //MQTT
-void func_comando_enviarKeepAlive(int iParametro, char* sParametro, float fParametro); //debug
-void func_comando_MQTTConfig(int iParametro, char* sParametro, float fParametro); //debug
+void func_comando_enviarKeepAlive(int iParametro, char* sParametro, float fParametro); 
+void func_comando_MQTTConfig(int iParametro, char* sParametro, float fParametro); 
 //Camara AI
-void func_comando_flash(int iParametro, char* sParametro, float fParametro); //debug
-void func_comando_ledRojo(int iParametro, char* sParametro, float fParametro); //debug
+void func_comando_borraCaras(int iParametro, char* sParametro, float fParametro);
+void func_comando_flash(int iParametro, char* sParametro, float fParametro); 
+void func_comando_ledRojo(int iParametro, char* sParametro, float fParametro); 
 
 
 OrdenesClass::OrdenesClass(void) {}
@@ -259,11 +261,11 @@ void OrdenesClass::inicializaOrden(void)
   comandos[i].descripcion="Encendido/Apagado del flash";
   comandos[i++].p_func_comando=func_comando_flash;
 
-  comandos[i].comando="led";
-  comandos[i].descripcion="Encendido/apagado del led incorporado";
-  comandos[i++].p_func_comando=func_comando_ledRojo;
+  comandos[i].comando="borraCaras";
+  comandos[i].descripcion="Borra caras aprendidas de la memoria flash";
+  comandos[i++].p_func_comando=func_comando_borraCaras;
 
-    //resto
+  //resto
   for(;i<MAX_COMANDOS;)
     {
     this->comandos[i].comando="vacio";
@@ -484,10 +486,10 @@ void func_comando_flash(int iParametro, char* sParametro, float fParametro)
     } 
   }
 
-void func_comando_ledRojo(int iParametro, char* sParametro, float fParametro)
+void func_comando_borraCaras(int iParametro, char* sParametro, float fParametro)
   {
-  if(iParametro==1) digitalWrite(33,HIGH);
-  else digitalWrite(33,LOW);
+  delete_all_faces();  
+  Serial.println("Caras borradas.");
   }
 
 /***************************** FIN funciones para comandos ******************************************/ 

@@ -141,7 +141,7 @@ body {
 document.addEventListener("DOMContentLoaded", function(event) {
   var baseHost = document.location.origin;
   var streamUrl = baseHost + ":81";
-  const WS_URL = "ws://" + window.location.host + ":82";
+  const WS_URL = "ws://" + window.location.host + ":88";
   const ws = new WebSocket(WS_URL);
 
   const view = document.getElementById("stream");
@@ -154,9 +154,12 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
   ws.onopen = () => {
     console.log(`Connected to ${WS_URL}`);
+    ws.send("stream");
   };
+  
   ws.onmessage = message => {
     if (typeof message.data === "string") {
+      console.log('se ha recibido: %s',message.data);
       if (message.data.substr(0, 8) == "listface") {
         addFaceToScreen(message.data.substr(9));
       } else if (message.data == "delete_faces") {
@@ -166,6 +169,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
       }
     }
     if (message.data instanceof Blob) {
+      console.log('se han recibido datos binarios');
       var urlObject = URL.createObjectURL(message.data);
       view.src = urlObject;
     }

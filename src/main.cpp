@@ -7,7 +7,7 @@
  */
  
 /***************************** Defines *****************************/
-#define MAX_VUELTAS      UINT16_MAX// 32767 
+#define MAX_VUELTAS      UINT16_MAX// 65535 
 
 // Una vuela de loop son ANCHO_INTERVALO segundos 
 #define ANCHO_INTERVALO         100 //Ancho en milisegundos de la rodaja de tiempo
@@ -17,7 +17,7 @@
 #define FRECUENCIA_ENVIO_DATOS   50 //cada cuantas vueltas de loop envia al broker el estado de E/S
 #define FRECUENCIA_ORDENES        2 //cada cuantas vueltas de loop atiende las ordenes via serie 
 
-#define FRECUENCIA_RECONOCIMIENTO_FACIAL 10 //cada cuantas vueltas de loop lee la imagen para reconocer una cara
+#define FRECUENCIA_RECONOCIMIENTO_FACIAL 5 //cada cuantas vueltas de loop lee la imagen para reconocer una cara
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
@@ -27,7 +27,7 @@
 #include <ServidorWeb.h>
 #include <camara.h>
 //#include <streaming.h>
-#include <faceREcon.h>
+#include <faceRecon.h>
 /***************************** Includes *****************************/
 
 /***************************** variables globales *****************************/
@@ -93,7 +93,7 @@ void setup()
   else Serial.println("No se pudo conectar al WiFi");
 
   //Servos
-  Serial.println("\n\nInit servos ---------------------------------------------------------------------\n");
+  //Serial.println("\n\nInit servos ---------------------------------------------------------------------\n");
   //Servo.inicializaServo();
   
   //Camara
@@ -101,12 +101,12 @@ void setup()
   camara_init();
 
   //Streaming
-  Serial.println("\n\nInit streaming ---------------------------------------------------------------------\n");
-  streaming_init(true);
+  //Serial.println("\n\nInit streaming ---------------------------------------------------------------------\n");
+  //streaming_init(true);
   
   //Websocket
   Serial.println("\n\nInit websocket ---------------------------------------------------------------------\n");  
-  //WebSocket_init(true);
+  WebSocket_init(true);
 
   //Reconocimiento facial
   Serial.println("\n\nInit reconocimiento facial ---------------------------------------------------------------------\n");
@@ -143,6 +143,7 @@ void loop()
   if ((vuelta % FRECUENCIA_RECONOCIMIENTO_FACIAL)==0) reconocimientoFacial(debugGlobal); //atiende el servidor web
   //Prioridad 3: Interfaces externos de consulta    
   if ((vuelta % FRECUENCIA_SERVIDOR_WEB)==0) webServer(debugGlobal); //atiende el servidor web
+  if ((vuelta % FRECUENCIA_SERVIDOR_WEB)==0) atiendeWebsocket();
   if ((vuelta % FRECUENCIA_MQTT)==0) miMQTT.atiendeMQTT(debugGlobal);      
   if ((vuelta % FRECUENCIA_ENVIO_DATOS)==0) miMQTT.enviaDatos(debugGlobal); //publica via MQTT los datos de entradas y salidas, segun configuracion
   if ((vuelta % FRECUENCIA_ORDENES)==0) Ordenes.gestionaOrdenes(debugGlobal); //Lee ordenes via serie
