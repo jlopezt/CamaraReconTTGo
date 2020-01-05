@@ -49,7 +49,6 @@ void func_comando_minuto(int iParametro, char* sParametro, float fParametro); //
 void func_comando_segundo(int iParametro, char* sParametro, float fParametro); //segundo"
 void func_comando_reloj(int iParametro, char* sParametro, float fParametro); //reloj 
 //MQTT
-void func_comando_enviarKeepAlive(int iParametro, char* sParametro, float fParametro); 
 void func_comando_MQTTConfig(int iParametro, char* sParametro, float fParametro); 
 //Camara AI
 void func_comando_borraCaras(int iParametro, char* sParametro, float fParametro);
@@ -248,10 +247,6 @@ void OrdenesClass::inicializaOrden(void)
   comandos[i++].p_func_comando=func_comando_reloj;
 
   //MQTT
-  comandos[i].comando="enviarKeepAlive";
-  comandos[i].descripcion="Activa/desactiva el envio de Kepp Alive MQTT";
-  comandos[i++].p_func_comando=func_comando_enviarKeepAlive;
-  
   comandos[i].comando="MQTTConfig";
   comandos[i].descripcion="Configuración de MQTT";
   comandos[i++].p_func_comando=func_comando_MQTTConfig;
@@ -459,17 +454,9 @@ void func_comando_reloj(int iParametro, char* sParametro, float fParametro)//"re
   else Serial.println("Horario de invierno");
   } 
   
-void func_comando_enviarKeepAlive(int iParametro, char* sParametro, float fParametro)//"debug")
-  {
-  if(iParametro!=0) miMQTT.setEnviarKeepALive(1);
-  else  miMQTT.setEnviarKeepALive(0);
-
-  Serial.printf("enviarKeepAlive=%i\n", miMQTT.getEnviarKeepAlive());
-  }
-
 void func_comando_MQTTConfig(int iParametro, char* sParametro, float fParametro)//"debug")
   {
-  Serial.printf("Configuracion leida:\nID MQTT: %s\nIP broker: %s\nIP Puerto del broker: %i\nUsuario: %s\nPassword: %s\nTopic root: %s\nEnviar KeepAlive: %i\nPublicar entradas: %i\nPublicar salidas: %i\nWill topic: %s\nWill msg: %s\nCelan session: %i\n",miMQTT.getID_MQTT().c_str(),miMQTT.getIPBroker().toString().c_str(),miMQTT.getPuertoBroker(),miMQTT.getUsuarioMQTT().c_str(),miMQTT.getPasswordMQTT().c_str(),miMQTT.gettopicRoot().c_str(),miMQTT.getEnviarKeepAlive(),miMQTT.getPublicarEntradas(),miMQTT.getPublicarSalidas(),(miMQTT.gettopicRoot()+"/"+String(WILL_TOPIC)).c_str(),WILL_MSG, (CLEAN_SESSION?1:0));
+  Serial.printf("Configuracion leida:\nID MQTT: %s\nIP broker: %s\nIP Puerto del broker: %i\nUsuario: %s\nPassword: %s\nTopic root: %s\nPublicar entradas: %i\nPublicar salidas: %i\nWill topic: %s\nWill msg: %s\nCelan session: %i\n",miMQTT.getID_MQTT().c_str(),miMQTT.getIPBroker().toString().c_str(),miMQTT.getPuertoBroker(),miMQTT.getUsuarioMQTT().c_str(),miMQTT.getPasswordMQTT().c_str(),miMQTT.gettopicRoot().c_str(),miMQTT.getPublicarEntradas(),miMQTT.getPublicarSalidas(),(miMQTT.gettopicRoot()+"/"+String(WILL_TOPIC)).c_str(),WILL_MSG, (CLEAN_SESSION?1:0));
   }  
 
 void func_comando_flash(int iParametro, char* sParametro, float fParametro)

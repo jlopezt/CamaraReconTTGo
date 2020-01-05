@@ -62,7 +62,7 @@ camera_fb_t *fb = NULL; //Global para todos los modulos que usen la camara. Aqui
 WebSocketsServer webSocket = WebSocketsServer(PUERTO_WEBSOCKET);
 typedef struct
   {
-  uint8_t id=NOT_CONNECTED;//No hay cliuente conectado
+  int8_t id=NOT_CONNECTED;//No hay cliuente conectado
   IPAddress IP={0,0,0,0};
   }cliente_t;
 cliente_t cliente;
@@ -169,8 +169,12 @@ int caraReconocida(String nombre)
   String topic;
   String payload;
 
+  //Activa el rele para abrir la puerta
+  Salidas.pulsoRele(0); //Fuerzo a que el primer rele es el que abre la puerta!!!!!
+
+  //Informa poir MQTT que se ha habierto la puerta y a quien y cuando
   topic="CaraReconocida";
-  payload=String("{\"nombre\": \"")+ nombre + String("\"}");
+  payload=String("{\"nombre\": \"")+ nombre + String("\", \"Hora\": \"") + reloj.getHora() + String("\"}");
     
   Serial.printf("Se envia:\ntopic: %s | payload: %s\n",topic.c_str(),payload.c_str());
   if (miMQTT.enviarMQTT(topic,payload)) return OK;
@@ -219,7 +223,7 @@ void reconocimientoFacial(boolean debug)
       //Se ha detectado una cara
       if(debug) Serial.printf("Hay una cara\n");
       out_res.face_id = get_face_id(aligned_face);////////DA CORE
-/***************************************************************/
+
       if (g_state == START_ENROLL)
         {
         int left_sample_face = enroll_face_id_to_flash_with_name(&st_face_list, out_res.face_id, st_name.enroll_name);
@@ -237,7 +241,6 @@ void reconocimientoFacial(boolean debug)
           send_face_list();
           }
         }
-/***************************************************************/
       else
         {     
         if (st_face_list.count > 0)
@@ -245,24 +248,27 @@ void reconocimientoFacial(boolean debug)
           face_id_node *f = recognize_face_with_name(&st_face_list, out_res.face_id);
           if (f)
             {
-            //cara reconocida  
-            if(debug || true) Serial.printf("Reconocido %s\n", f->id_name);
-            enviarWSTXT("RECOGNISING");
+            //cara reconocida
+            String cad="Reconocido: "+ String(f->id_name);  
+            if(debug || true) Serial.printf("%s\n", cad.c_str());
+            enviarWSTXT(cad);
             caraReconocida(f->id_name);
             }
           else
             {
             //cara no reconocida 
             if(debug) Serial.printf("Cara no reconocida\n"); 
+            enviarWSTXT("Cara no reconocida");
             }
           }
         }
-/***************************************************************/
+
       dl_matrix3d_free(out_res.face_id);
       }
     }
   else
     {
+    enviarWSTXT("No se detecta cara");
     //No se ha detectado cara  
     }
   
@@ -462,10 +468,16 @@ void WebSocket_init(boolean debug)
 boolean enviarWSTXT(String mensaje)
   {
   boolean salida=false;  
+
   if(cliente.id!=NOT_CONNECTED) salida=webSocket.sendTXT(cliente.id, (const uint8_t *)mensaje.c_str());
-  if (salida) Serial.println(mensaje);
-  else Serial.printf("Error en el envio de %s\n",mensaje.c_str());
-  return salida;
+
+  if (debugGlobal)
+    {
+    if (salida ) Serial.println(mensaje);
+    else Serial.printf("Error en el envio de [%s] | id de cliente: %i | IP de cliente: %s\n",mensaje.c_str(),cliente.id,cliente.IP.toString().c_str());
+    }
+
+  return salida; 
   }
 
 void atiendeWebsocket(void)

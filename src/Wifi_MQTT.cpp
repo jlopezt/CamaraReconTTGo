@@ -36,10 +36,6 @@ void miMQTTClass::inicializaMQTT(void)
 
   if (conectaMQTT()) Serial.println("connectado al broker");  
   else Serial.printf("error al conectar al broker con estado %i\n",clienteMQTT.state());
-
-  //Variables adicionales
-  //topicKeepAlive=ID_MQTT + "/keepalive";
-  topicKeepAlive="keepalive";
   }
 
 /************************************************/
@@ -58,7 +54,6 @@ boolean miMQTTClass::recuperaDatosMQTT(boolean debug)
   usuarioMQTT="";
   passwordMQTT="";
   topicRoot=""; 
-  enviarKeepAlive=0; 
   publicarEntradas=1; 
   publicarSalidas=1;    
 
@@ -94,18 +89,71 @@ boolean miMQTTClass::parseaConfiguracionMQTT(String contenido)
     usuarioMQTT=((const char *)json["usuarioMQTT"]);
     passwordMQTT=((const char *)json["passwordMQTT"]);
     topicRoot=((const char *)json["topicRoot"]);
-    enviarKeepAlive=atoi(json["keepAlive"]); 
     publicarEntradas=atoi(json["publicarEntradas"]); 
     publicarSalidas=atoi(json["publicarSalidas"]); 
-    Serial.printf("Configuracion leida:\nID MQTT: %s\nIP broker: %s\nIP Puerto del broker: %i\nUsuario: %s\nPassword: %s\nTopic root: %s\nEnviar KeepAlive: %i\nPublicar entradas: %i\nPublicar salidas: %i\n",ID_MQTT.c_str(),IPBroker.toString().c_str(),puertoBroker,usuarioMQTT.c_str(),passwordMQTT.c_str(),topicRoot.c_str(),enviarKeepAlive,publicarEntradas,publicarSalidas);
+    Serial.printf("Configuracion leida:\nID MQTT: %s\nIP broker: %s\nIP Puerto del broker: %i\nUsuario: %s\nPassword: %s\nTopic root: %s\nPublicar entradas: %i\nPublicar salidas: %i\n",ID_MQTT.c_str(),IPBroker.toString().c_str(),puertoBroker,usuarioMQTT.c_str(),passwordMQTT.c_str(),topicRoot.c_str(),publicarEntradas,publicarSalidas);
 //************************************************************************************************
     return true;
     }
   return false;
   }
 
-
 /***********************************************Funciones de gestion de mensajes MQTT**************************************************************/
+/***************************************************/
+/*    Genera el JSON de respuesta al Ping MQTT     */
+/***************************************************/
+String miMQTTClass::generaJSONPing(boolean debug)  
+  {
+  String cad="";
+
+  cad += "{";
+  cad += "\"myIP\": \"" + RedWifi.getIP(false) + "\",";
+  cad += "\"ID_MQTT\": \"" + ID_MQTT + "\",";
+  cad += "\"IPBbroker\": \"" + IPBroker.toString() + "\",";
+  cad += "\"IPPuertoBroker\":" + String(puertoBroker) + "";
+  cad += "}";
+
+  if (debug) Serial.printf("Respuesta al ping MQTT: \n%s\n",cad.c_str());
+  return cad;
+  }
+
+/***************************************************/
+/* Funcion que gestiona la respuesta al ping MQTT  */
+/***************************************************/
+void miMQTTClass::respondePingMQTT(char* topic, byte* payload, unsigned int length)
+  {  
+  char mensaje[length];    
+
+  Serial.printf("Recibido mensaje Ping:\ntopic: %s\npayload: %s\nlength: %i\n",topic,payload,length);
+  
+  //copio el payload en la cadena mensaje
+  for(int8_t i=0;i<length;i++) mensaje[i]=payload[i];
+  mensaje[length]=0;//acabo la cadena
+
+  /**********************Leo el JSON***********************/
+  const size_t bufferSize = JSON_OBJECT_SIZE(3) + 50;
+  DynamicJsonBuffer jsonBuffer(bufferSize);     
+  JsonObject& root = jsonBuffer.parseObject(mensaje);
+  if (!root.success()) 
+    {
+    Serial.println("No se pudo parsear el JSON");
+    return; //si el mensaje es incorrecto sale  
+    }
+
+  //Si tiene IP se pregunta por un elemento en concreto. Compruebo si soy yo.
+  if (root.containsKey("IP")) 
+    {
+    if (String(root["IP"].as<char*>())!=RedWifi.getIP(false)) return;
+    }
+
+  //SI no tenia IP o si tenia la mia, respondo
+  String T=TOPIC_PING_RESPUESTA;
+  String P= generaJSONPing(false).c_str();
+  Serial.printf("Topic: %s\nPayload: %s\n",T.c_str(),P.c_str());
+  Serial.printf("Resultado: %i\n", clienteMQTT.publish(T.c_str(),P.c_str()));   
+  /**********************Fin JSON***********************/    
+  }
+
 /***************************************************/
 /* Funcion que recibe el mensaje cuando se publica */
 /* en el bus un topic al que esta subscrito        */
@@ -117,14 +165,13 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length)
   //Serial.printf("Entrando en callback: \n Topic: %s\nPayload %s\nLongitud %i\n", topic, payload, length);
   
   /**********compruebo el topic*****************/
-  //Sirve para solo atender a los topic de medidas. Si se suscribe a otro habira que gestionarlo aqui
-  String cad=String(topic);
+  //Sirve para solo atender a los topic suscritos. Si se suscribe a otro habira que gestionarlo aqui
+  String cad=String(topic);  //copio el topic a la cadena cad
+
   //topics descartados
   if(cad==String(miMQTT.gettopicRoot() + "/" + miMQTT.getID_MQTT() + "/keepalive")) return;
   if(cad==String(miMQTT.gettopicRoot() + "/" + miMQTT.getID_MQTT() + "/entradas")) return;
-  if(cad==String(miMQTT.gettopicRoot() + "/" + miMQTT.getID_MQTT() + "/salidas")) return;
-  
-    //copio el topic a la cadena cad
+  if(cad==String(miMQTT.gettopicRoot() + "/" + miMQTT.getID_MQTT() + "/salidas")) return;  
 
   if(cad.substring(0,String(miMQTT.gettopicRoot() + "/" + miMQTT.getID_MQTT()).length())!=String(miMQTT.gettopicRoot() + "/" + miMQTT.getID_MQTT())) //no deberia, solo se suscribe a los suyos
     {
@@ -137,20 +184,23 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length)
     }  
   else//topic correcto
     {  
+    if(cad.equalsIgnoreCase(TOPIC_PING)) miMQTT.respondePingMQTT(topic,payload,length);   
+    /* No espera ningun mensaje  
     //copio el payload en la cadena mensaje
     char mensaje[length+1];
     for(int8_t i=0;i<length;i++) mensaje[i]=payload[i];
     mensaje[length]=0;//añado el final de cadena 
-    Serial.printf("MQTT mensaje recibido: %s\nmensaje copiado %s\n",payload,mensaje);
+    if(debugGlobal) Serial.printf("MQTT mensaje recibido: %s\nmensaje copiado %s\n",payload,mensaje);
   
-    /**********************Leo el JSON***********************/
+    //**********************Leo el JSON***********************
     const size_t bufferSize = JSON_OBJECT_SIZE(3) + 50;
     DynamicJsonBuffer jsonBuffer(bufferSize);     
     JsonObject& root = jsonBuffer.parseObject(mensaje);
     if (root.success()) 
       {  
       }
-    /*********************Fin leo JSON**********************/  
+    //*********************Fin leo JSON**********************
+    */
     }
   }
 
@@ -173,8 +223,8 @@ boolean miMQTTClass::conectaMQTT(void)
     if (clienteMQTT.connect(ID_MQTT.c_str(), usuarioMQTT.c_str(), passwordMQTT.c_str(), (topicRoot+"/"+String(WILL_TOPIC)).c_str(), WILL_QOS, WILL_RETAIN, ("¡"+ID_MQTT+" caido!").c_str(), CLEAN_SESSION))
       {
       if(debugGlobal) Serial.println("conectado");
-      //Inicio la subscripcion al topic de las medidas boolean subscribe(const char* topic);
-      String topic = topicRoot + "/" + ID_MQTT + "/" + WILDCARD_ALL; //uso el + como comodin para culaquier habitacion
+      //Inicio la subscripcion al topic de todolo que empiece por <topicRoot>/<ID_MQTT>/<WILDCARD_ALL> boolean subscribe(const char* topic);
+      String topic = topicRoot + "/" + ID_MQTT + "/" + WILDCARD_ALL; 
       if (clienteMQTT.subscribe(topic.c_str())) Serial.printf("Subscrito al topic %s\n", topic.c_str());
       else Serial.printf("Error al subscribirse al topic %s\n", topic.c_str());       
       return(true);
@@ -219,22 +269,7 @@ boolean miMQTTClass::enviarMQTT(String topic, String payload)
 /* si se ha recibido un mensaje             */
 /********************************************/
 void miMQTTClass::atiendeMQTT(boolean debug)
-  {
-  if(enviarKeepAlive)
-    {  
-    String topic=topicKeepAlive;  
-    String payload=String(millis());
-  
-    if(enviarMQTT(topic, payload)) 
-      {
-      if(debug)Serial.println("Enviado json al broker con exito.");
-      }
-    else 
-      {
-      if(debug)Serial.println("¡¡Error al enviar json al broker!!");
-      }
-    }
-    
+  {  
   clienteMQTT.loop();
   }  
 
@@ -297,9 +332,6 @@ String miMQTTClass::stateTexto(void)
   return (cad);
   }
   
-int8_t miMQTTClass::getEnviarKeepAlive(void) {return enviarKeepAlive;};
-void miMQTTClass::setEnviarKeepALive(int8_t EnviarKA){enviarKeepAlive=EnviarKA;};
-
 int8_t miMQTTClass::getPublicarEntradas(void){return publicarEntradas;};
 void miMQTTClass::setPublicarEntradas(int8_t pubEnt){publicarEntradas=pubEnt;};
 

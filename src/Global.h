@@ -14,15 +14,25 @@
 #define KO               -1
 //#define OK                0
 
-
 //Ficheros de configuracion
 #define FICHERO_CANDADO                  "/Candado"
 #define GLOBAL_CONFIG_FILE               "/Config.json"
 #define GLOBAL_CONFIG_BAK_FILE           "/Config.json.bak"
+#define ENTRADAS_CONFIG_FILE             "/EntradasConfig.json"
+#define ENTRADAS_CONFIG_BAK_FILE         "/EntradasConfig.json.bak"
+#define SALIDAS_CONFIG_FILE              "/SalidasConfig.json"
+#define SALIDAS_CONFIG_BAK_FILE          "/SalidasConfig.json.bak"
 #define WIFI_CONFIG_FILE                 "/WiFiConfig.json"
 #define WIFI_CONFIG_BAK_FILE             "/WiFiConfig.json.bak"
 #define MQTT_CONFIG_FILE                 "/MQTTConfig.json"
 #define MQTT_CONFIG_BAK_FILE             "/MQTTConfig.json.bak"
+#define SECUENCIADOR_CONFIG_FILE         "/SecuenciadorConfig.json"
+#define SECUENCIADOR_CONFIG_BAK_FILE     "/SecuenciadorConfig.json.bak"
+
+//Definicion de pines
+#define MAX_PINES        7 //numero de pines disponibles para entradas y salidas
+#define MAX_ENTRADAS     4 //numero maximo de reles soportado
+#define MAX_RELES        MAX_PINES-MAX_ENTRADAS //numero maximo de salidas
 
 #define ANCHO_PULSO 1*1000 //Ancho del pulso en milisegundos
 
@@ -41,6 +51,9 @@
 #include <ArduinoJson.h>
 #include <cacharro.h>
 #include <SNTP.h>
+#include <Salidas.h>
+#include <Entradas.h>
+#include <Secuenciador.h>
 #include <Wifi_MQTT.h>
 #include <ArduinoOTA.h>
 #include <RedWifi.h>

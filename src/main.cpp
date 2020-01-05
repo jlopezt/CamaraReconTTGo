@@ -10,14 +10,16 @@
 #define MAX_VUELTAS      UINT16_MAX// 65535 
 
 // Una vuela de loop son ANCHO_INTERVALO segundos 
-#define ANCHO_INTERVALO         100 //Ancho en milisegundos de la rodaja de tiempo
-#define FRECUENCIA_OTA            5 //cada cuantas vueltas de loop atiende las acciones
-#define FRECUENCIA_SERVIDOR_WEB   1 //cada cuantas vueltas de loop atiende el servidor web
-#define FRECUENCIA_MQTT          10 //cada cuantas vueltas de loop envia y lee del broker MQTT
-#define FRECUENCIA_ENVIO_DATOS   50 //cada cuantas vueltas de loop envia al broker el estado de E/S
-#define FRECUENCIA_ORDENES        2 //cada cuantas vueltas de loop atiende las ordenes via serie 
-
-#define FRECUENCIA_RECONOCIMIENTO_FACIAL 5 //cada cuantas vueltas de loop lee la imagen para reconocer una cara
+#define ANCHO_INTERVALO                 100 //Ancho en milisegundos de la rodaja de tiempo
+#define FRECUENCIA_OTA                    5 //cada cuantas vueltas de loop atiende las acciones
+#define FRECUENCIA_RECONOCIMIENTO_FACIAL  5 //cada cuantas vueltas de loop lee la imagen para reconocer una cara
+#define FRECUENCIA_ENTRADAS               5 //cada cuantas vueltas de loop atiende las entradas
+#define FRECUENCIA_SALIDAS                5 //cada cuantas vueltas de loop atiende las salidas
+#define FRECUENCIA_SECUENCIADOR          10 //cada cuantas vueltas de loop atiende al secuenciador
+#define FRECUENCIA_SERVIDOR_WEB           1 //cada cuantas vueltas de loop atiende el servidor web
+#define FRECUENCIA_MQTT                  10 //cada cuantas vueltas de loop envia y lee del broker MQTT
+#define FRECUENCIA_ENVIO_DATOS           50 //cada cuantas vueltas de loop envia al broker el estado de E/S
+#define FRECUENCIA_ORDENES                2 //cada cuantas vueltas de loop atiende las ordenes via serie 
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
@@ -92,18 +94,22 @@ void setup()
     }
   else Serial.println("No se pudo conectar al WiFi");
 
-  //Servos
-  //Serial.println("\n\nInit servos ---------------------------------------------------------------------\n");
-  //Servo.inicializaServo();
+  //Entradas
+  Serial.println("\n\nInit entradas ---------------------------------------------------------------------\n");
+  Entradas.inicializaEntradas();
+
+  //Salidas
+  Serial.println("\n\nInit salidas ---------------------------------------------------------------------\n");
+  Salidas.inicializaSalidas();
+
+  //Secuenciador
+  //Serial.println("\n\nInit secuenciador ---------------------------------------------------------------------\n");
+  //Secuenciador.inicializaSecuenciador();
   
   //Camara
   Serial.println("\n\nInit camara ---------------------------------------------------------------------\n");
   camara_init();
 
-  //Streaming
-  //Serial.println("\n\nInit streaming ---------------------------------------------------------------------\n");
-  //streaming_init(true);
-  
   //Websocket
   Serial.println("\n\nInit websocket ---------------------------------------------------------------------\n");  
   WebSocket_init(true);
@@ -141,6 +147,9 @@ void loop()
   if ((vuelta % FRECUENCIA_OTA)==0) gestionaOTA(); //Gestion de actualizacion OTA
   //Prioridad 2: Funciones de control.
   if ((vuelta % FRECUENCIA_RECONOCIMIENTO_FACIAL)==0) reconocimientoFacial(debugGlobal); //atiende el servidor web
+  if ((vuelta % FRECUENCIA_ENTRADAS)==0) Entradas.consultaEntradas(debugGlobal); //comprueba las entradas
+  if ((vuelta % FRECUENCIA_SALIDAS)==0) Salidas.actualizaSalidas(debugGlobal); //comprueba las salidas
+  //if ((vuelta % FRECUENCIA_SECUENCIADOR)==0) Secuenciador.actualizaSecuenciador(debugGlobal); //Actualiza la salida del secuenciador
   //Prioridad 3: Interfaces externos de consulta    
   if ((vuelta % FRECUENCIA_SERVIDOR_WEB)==0) webServer(debugGlobal); //atiende el servidor web
   if ((vuelta % FRECUENCIA_SERVIDOR_WEB)==0) atiendeWebsocket();

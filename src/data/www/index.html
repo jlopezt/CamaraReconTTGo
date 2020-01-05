@@ -122,11 +122,7 @@ body {
   </div>
   <div class="buttons">
     <button id="button-stream" class="left">Visualizar</button>
-    <button id="button-detect" class="right">Detectar</button>
-  </div>
-  <div class="buttons">
-    <button id="button-capture" class="left" title="Introduzca el nombre de la cara a capturar">Capturar</button>
-    <button id="button-recognise" class="right">Reconocer</button>
+    <button id="button-capture" class="right" title="Introduzca el nombre de la cara a capturar">Capturar</button>    
   </div>
   <div class="people">
     <h3>Caras capturadas</h3>
@@ -135,7 +131,7 @@ body {
   </div>
   <div class="buttons">
     <button id="delete_all">Borra todas</button>
-  </div>
+  </div> 
 </div>
 <script>
 document.addEventListener("DOMContentLoaded", function(event) {
@@ -147,9 +143,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
   const view = document.getElementById("stream");
   const personFormField = document.getElementById("person");
   const streamButton = document.getElementById("button-stream");
-  const detectButton = document.getElementById("button-detect");
   const captureButton = document.getElementById("button-capture");
-  const recogniseButton = document.getElementById("button-recognise");
   const deleteAllButton = document.getElementById("delete_all");
 
   ws.onopen = () => {
@@ -178,19 +172,16 @@ document.addEventListener("DOMContentLoaded", function(event) {
   streamButton.onclick = () => {
     ws.send("stream");
   };
-  detectButton.onclick = () => {
-    ws.send("detect");
-  };
+
   captureButton.onclick = () => {
     person_name = document.getElementById("person").value;
     ws.send("capture:" + person_name);
   };
-  recogniseButton.onclick = () => {
-    ws.send("recognise");
-  };
+
   deleteAllButton.onclick = () => {
     ws.send("delete_all");
   };
+  
   personFormField.onkeyup = () => {
     captureButton.disabled = false;
   };
