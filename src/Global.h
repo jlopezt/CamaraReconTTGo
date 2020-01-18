@@ -8,7 +8,7 @@
 
 //Defines generales
 #define NOMBRE_FAMILIA   "Camara servomotorizada"
-#define VERSION          "1.0.0 (ESP32 1.0.2|Migracion C++|OTA|MQTT|FicherosWeb)"
+#define VERSION          "1.1.0 (ESP32 1.0.2|Migracion C++|OTA|MQTT|FicherosWeb)"
 #define SEPARADOR        '|'
 #define SUBSEPARADOR     '#'
 #define KO               -1
@@ -28,6 +28,10 @@
 #define MQTT_CONFIG_BAK_FILE             "/MQTTConfig.json.bak"
 #define SECUENCIADOR_CONFIG_FILE         "/SecuenciadorConfig.json"
 #define SECUENCIADOR_CONFIG_BAK_FILE     "/SecuenciadorConfig.json.bak"
+#define FACE_RECON_CONFIG_FILE           "/FaceReconConfig.json"
+#define FACE_RECON_CONFIG_BAK_FILE       "/FaceReconConfig.json.bak"
+#define FACE_RECON_FACES_FILE            "/FaceReconConfig.bin"
+#define FACE_RECON_FACES_BAK_FILE        "/FaceReconConfig.bin.bak"
 
 //Definicion de pines
 #define MAX_PINES        7 //numero de pines disponibles para entradas y salidas
@@ -48,6 +52,7 @@
 /***************************** Includes *****************************/
 #include <Arduino.h>
 #include <SistemaFicheros.h>
+#include <SistemaFicherosSD.h>
 #include <ArduinoJson.h>
 #include <cacharro.h>
 #include <SNTP.h>

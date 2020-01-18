@@ -54,6 +54,7 @@ void setup()
   Serial.printf("\n\nInit Ficheros ---------------------------------------------------------------------\n");
   //Ficheros - Lo primero para poder leer los demas ficheros de configuracion
   SistemaFicheros.inicializaFicheros(debugGlobal);
+  if(!SistemaFicherosSD.inicializaFicheros(debugGlobal)) Serial.println("Error al inicializar la SD");
 
   //Compruebo si existe candado, si existe la ultima configuracion fue mal
   if(SistemaFicheros.existeFichero(FICHERO_CANDADO)) 

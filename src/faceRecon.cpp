@@ -10,6 +10,7 @@
 //Face reocn
 #define ENROLL_CONFIRM_TIMES 5
 #define FACE_ID_SAVE_NUMBER 7
+#define INTERVALO_RECONOCIMIENTOS 10000
 
 //Streamming
 #define PART_BOUNDARY "123456789000000000000987654321"
@@ -19,8 +20,6 @@
 //WebSockets
 #define PUERTO_WEBSOCKET  88
 #define NOT_CONNECTED     -1
-#define INDEX_HTML "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>ESP32 Captura de caras con nombre<\title><\head><body>VACIO<\body><\html>"
-#define INDEX_HTML_FILE                 "/web/index.html"
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
@@ -92,24 +91,21 @@ static inline mtmn_config_t app_mtmn_config()
 }
 mtmn_config_t mtmn_config = app_mtmn_config();
 
-/*
-typedef struct
-{
-    face_id_node *head;    //!< head pointer of the id list 
-    face_id_node *tail;    //!< tail pointer of the id list 
-    uint8_t count;         //!< number of enrolled ids 
-    uint8_t confirm_times; //!< images needed for one enrolling 
-} face_id_name_list;
-*/
 face_id_name_list st_face_list;
 static dl_matrix3du_t *aligned_face = NULL;
 
 httpd_handle_t stream_httpd = NULL;
 
+uint16_t ultimoReconocimiento;
+typedef union
+  {
+  fptp_t *float_p;
+  uint8_t *uint8_p;  
+  }item_t;
 //*******Recupero la pagina inicial***********   
-extern const unsigned char index_html_zip_start[] asm("_binary_src_www_index_html_zip_start");
-extern const unsigned char index_html_zip_end[]   asm("_binary_src_www_index_html_zip_end");
-size_t index_html_zip_len;
+//extern const unsigned char index_html_zip_start[] asm("_binary_src_www_index_html_zip_start");
+//extern const unsigned char index_html_zip_end[]   asm("_binary_src_www_index_html_zip_end");
+//size_t index_html_zip_len;
 
 camera_fb_t *xfb;
 
@@ -133,8 +129,10 @@ typedef struct
 
 httpd_resp_value st_name;
 /********************************************************************************************************/
-
-/***************************************Inicio reconocimiento*****************************************************************/
+//Prototipos de funciones
+boolean recuperaDatosCaras(boolean debug);
+boolean parseaConfiguracionCaras(String contenido);
+/***************************************Inicializa reconocimiento*****************************************************************/
 /**********************************************************/
 /*                                                        */
 /*     inicializa el sistema de reconocimiento facial     */
@@ -142,22 +140,217 @@ httpd_resp_value st_name;
 /**********************************************************/
 void faceRecon_init(boolean debug)
   {
-  if(debug) Serial.printf("*************Init reconocimiento facial*****************\n");    
+  Serial.printf("*************Init reconocimiento facial*****************\n");    
   g_state=DISCONNECT;
+  ultimoReconocimiento=millis();
 
-  //carga la lista de caras
-  face_id_name_init(&st_face_list, FACE_ID_SAVE_NUMBER, ENROLL_CONFIRM_TIMES);
-  aligned_face = dl_matrix3du_alloc(1, FACE_WIDTH, FACE_HEIGHT, 3);
-  read_face_id_from_flash_with_name(&st_face_list);
+  if(!recuperaDatosCaras(debugGlobal)) 
+    {
+    Serial.println("Configuracion de caras leida de la flash");
+    //Inicializa la lista de caras
+    face_id_name_init(&st_face_list, FACE_ID_SAVE_NUMBER, ENROLL_CONFIRM_TIMES);
+    //Carga desde la memoria flash
+    read_face_id_from_flash_with_name(&st_face_list);
+    }
 
-  if(debug) Serial.printf("Leidas %i caras\n", st_face_list.count);  
+  Serial.printf("Leidas %i caras\n", st_face_list.count);  
   face_id_node *head = st_face_list.head;
   for (int i = 0; i < st_face_list.count; i++) // loop current faces
     {
     Serial.printf("cara[%i] nombre: %s\n",i,head->id_name);
     head = head->next;
     }
+
+  aligned_face = dl_matrix3du_alloc(1, FACE_WIDTH, FACE_HEIGHT, 3);  
   }
+
+boolean recuperaDatosCaras(boolean debug)
+  {
+  String cad="";
+
+  if (debug) Serial.println("Recupero configuracion de archivo...");
+  
+  if(!SistemaFicheros.leeFicheroConfig(FACE_RECON_CONFIG_FILE, cad)) 
+    {
+    //Confgiguracion por defecto
+    Serial.printf("No existe fichero de configuracion de Caras\n");
+    return false; 
+    }      
+    
+  return parseaConfiguracionCaras(cad);
+  }
+
+/*******************************************************/
+/*  Lee la configuracion de caras a ficheros en la     */
+/*  memoria flash del esp32-CAM.                       */
+/*                                                     */
+/*  Lee un fichero JSON con el numero de caras, el     */
+/*  confirm_times (2 uint8_t) y una lista con  los     */
+/*  nombres de las caras. Ademas, lee un fichero       */
+/*  binario con las configuraiones de las caras, como  */
+/*  nodos de la lista que menja en memoria durtante el */
+/*  proceso de reconocimiento.                         */
+/*******************************************************/
+boolean parseaConfiguracionCaras(String contenido)
+{
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject& json = jsonBuffer.parseObject(contenido.c_str());
+
+  Serial.print("\nJSON a parsear: ");
+  json.printTo(Serial);
+  if (!json.success()) return false;
+        
+  Serial.println("parsed json");
+//******************************Parte especifica del json a leer********************************
+  uint8_t confirm_times=ENROLL_CONFIRM_TIMES;
+  if (json.containsKey("confirm_times")) confirm_times=json["confirm_times"]; 
+  uint8_t count=0;
+  if (json.containsKey("count")) count=json["count"]; 
+
+  //Inicializo la lista de caras con el contador y el numero de confirmaciones
+  face_id_name_init(&st_face_list, count, confirm_times);
+  JsonArray& caras = json["face_id_nodes"];
+
+  for(uint8_t i=0;i<count;i++)
+    {
+    JsonObject& cara = caras[i];  
+
+    face_id_node *new_node = (face_id_node *)malloc(sizeof(face_id_node));
+    new_node->next = NULL;//doy valor a next
+    strcpy(new_node->id_name, (const char *)cara["nombre"]);//doy valor a id_name
+    //relleno id_vec que es un dl_matrix3d_t
+    new_node->id_vec = (dl_matrix3d_t *)malloc(sizeof(dl_matrix3d_t));//aloco memoria para id_vec
+    if(new_node->id_vec==NULL) return false;
+    new_node->id_vec->w=cara["w"];//doy valor a w
+    new_node->id_vec->h=cara["h"];//doy valor a h
+    new_node->id_vec->c=cara["c"];//doy valor a c
+    new_node->id_vec->n=cara["n"];//doy valor a n
+    new_node->id_vec->stride=cara["stride"];//doy valor a stride
+    new_node->id_vec->item=(fptp_t *)malloc(FACE_ID_SIZE * sizeof(float));
+    SistemaFicheros.leeFicheroBin(String("/")+String(new_node->id_name)+String(".bin"),(uint8_t *)new_node->id_vec->item,0,(uint16_t)(FACE_ID_SIZE * sizeof(float)));//doy valor a item
+
+    //Enlazo el nodo a la lista
+    if (NULL == st_face_list.head)
+      {
+        st_face_list.head = new_node;
+        st_face_list.tail = new_node;
+      }
+    else
+      {
+        st_face_list.tail->next = new_node;
+        st_face_list.tail = new_node;
+      }
+
+    st_face_list.count++;        
+    }
+
+  Serial.printf("Caras:\n"); 
+  face_id_node *cara=st_face_list.head;
+  for(int8_t i=0;i<st_face_list.count;i++) 
+    {
+    Serial.printf("Cara %s\n",cara->id_name);
+    cara=cara->next;
+    }
+//************************************************************************************************
+
+  return true;    
+}
+
+/**********************************************/
+/*                                            */
+/*       Serializa la lista de caras          */
+/*                                            
+typedef float fptp_t; //apunta a un area de memoria de FACE_ID_SIZE floats
+typedef struct
+{
+    int w;          //!< Width 
+    int h;          //!< Height 
+    int c;          //!< Channel 
+    int n;          //!< Number of filter, input and output must be 1 
+    int stride;     //!< Step between lines 
+    fptp_t *item;   //!< Data 
+} dl_matrix3d_t;
+
+typedef struct tag_face_id_node
+  {
+  struct tag_face_id_node *next;
+  char id_name[ENROLL_NAME_LEN];
+  dl_matrix3d_t *id_vec;
+  } face_id_node;
+
+typedef struct
+  {
+  face_id_node *head;    //!< head pointer of the id list 
+  face_id_node *tail;    //!< tail pointer of the id list 
+  uint8_t count;         //!< number of enrolled ids 
+  uint8_t confirm_times; //!< images needed for one enrolling 
+  } face_id_name_list;
+
+JSON para serializar la lista de caras
+{
+  "count": 3,
+  "confirm_times": 5,
+  "face_id_nodes": [
+    {"id_name": "Jose",     "dl_matrix3d_t":{"w":1,"h":1,"c":1,"n":1,"stride":1,"item":1}},
+    {"id_name": "Almudena", "dl_matrix3d_t":{"w":1,"h":1,"c":1,"n":1,"stride":1,"item":1}},
+    {"id_name": "Jorge",    "dl_matrix3d_t":{"w":1,"h":1,"c":1,"n":1,"stride":1,"item":1}}
+  ]
+}  
+                                              */
+/**********************************************/
+/*******************************************************/
+/*  Salva la configuracion de caras a ficheros en la   */
+/*  memoria flash del esp32-CAM.                       */
+/*                                                     */
+/*  Salva un fichero JSON con el numero de caras, el   */
+/*  confirm_times (2 uint8_t) y una lista con  los     */
+/*  nombres de las caras. Ademas, salva un fichero     */
+/*  binario con las configuraiones de las caras, como  */
+/*  nodos de la lista que menja en memoria durtante el */
+/*  proceso de reconocimiento.                         */
+/*******************************************************/
+boolean salvar_lista_face_id_a_fichero(face_id_name_list *lista, String ficheroConfig,String ficheroConfigBak)
+{
+  //genero el jsonBuffer
+  const size_t tamanoBuffer=JSON_ARRAY_SIZE(lista->count)+JSON_OBJECT_SIZE(3)+lista->count*JSON_OBJECT_SIZE(6);
+  DynamicJsonBuffer jb(tamanoBuffer);
+
+  //Creo el JsonObject 
+  JsonObject& root = jb.createObject();
+  root.set("count",lista->count);
+  root.set("confirm_times",lista->confirm_times);
+
+  face_id_node *cara = lista->head;
+  JsonArray& nodos = root.createNestedArray("face_id_nodes");
+  for(uint8_t caras=0;caras<lista->count;caras++)
+    {
+    if(cara==NULL) return false;//hay menos nodos de los que dice count
+
+    dl_matrix3d_t *matrix=cara->id_vec;
+    JsonObject& nodo = nodos.createNestedObject();
+    nodo["nombre"] = cara->id_name;
+    nodo["w"] = matrix->w;
+    nodo["h"] = matrix->h;
+    nodo["c"] = matrix->c;
+    nodo["n"] = matrix->n;
+    nodo["stride"] = matrix->stride;
+
+    String nombreFicheroBin=String("/")+String(cara->id_name)+String(".bin");
+    SistemaFicheros.salvaFicheroBin(nombreFicheroBin,nombreFicheroBin+String(".bak"),(uint8_t *)matrix->item,FACE_ID_SIZE * (uint16_t)sizeof(float));
+
+    cara = cara->next;//paso a la siguiente cara de la lista
+    }
+  
+  root.prettyPrintTo(Serial);
+
+  //Salvo el fichero de configuracion
+  String cad;
+  root.printTo(cad);
+  if(!SistemaFicheros.salvaFicheroConfig(ficheroConfig,ficheroConfigBak,cad)) return false;
+
+  return true;
+}  
+/**********************************************************Fin configuracion******************************************************************/  
 
 /******************************************************/
 /*                                                    */
@@ -168,20 +361,26 @@ int caraReconocida(String nombre)
   {
   String topic;
   String payload;
+  uint16_t ahora=millis();
 
-  //Activa el rele para abrir la puerta
-  Salidas.pulsoRele(0); //Fuerzo a que el primer rele es el que abre la puerta!!!!!
+  if(ahora-ultimoReconocimiento>INTERVALO_RECONOCIMIENTOS) 
+    {
+    ultimoReconocimiento=ahora;
 
-  //Informa poir MQTT que se ha habierto la puerta y a quien y cuando
-  topic="CaraReconocida";
-  payload=String("{\"nombre\": \"")+ nombre + String("\", \"Hora\": \"") + reloj.getHora() + String("\"}");
-    
-  Serial.printf("Se envia:\ntopic: %s | payload: %s\n",topic.c_str(),payload.c_str());
-  if (miMQTT.enviarMQTT(topic,payload)) return OK;
+    //Activa el rele para abrir la puerta
+    Salidas.pulsoRele(0); //Fuerzo a que el primer rele es el que abre la puerta!!!!!
   
-  return KO;
-  } 
-  
+    //Informa poir MQTT que se ha habierto la puerta y a quien y cuando
+    topic="CaraReconocida";
+    payload=String("{\"nombre\": \"")+ nombre + String("\", \"Hora\": \"") + reloj.getHora() + String("\"}");
+      
+    Serial.printf("Se envia:\ntopic: %s | payload: %s\n",topic.c_str(),payload.c_str());
+    if (miMQTT.enviarMQTT(topic,payload)) return OK;   
+    return KO;
+    } 
+  return OK;
+  }
+
 /**********************************************************/
 /*                                                        */
 /* funcion de reconiocimiento facial sobre la imagen      */
@@ -378,6 +577,23 @@ void gestionaMensajes(uint8_t cliente, String mensaje) //Tiene que implementar l
     Serial.println("Borrando caras");
     delete_all_faces();
 	  }
+
+  if (mensaje == "serialize") 
+    {
+    String cad="";  
+    if(salvar_lista_face_id_a_fichero(&st_face_list, FACE_RECON_CONFIG_FILE,FACE_RECON_CONFIG_BAK_FILE)) cad="config salvada";
+    else cad="Error al salvar la configuracion";
+
+    webSocket.sendTXT(cliente, cad);
+    }
+
+  if (mensaje == "foto")  
+    {
+    Serial.println("Guardando  foto en la SD...");
+    SistemaFicherosSD.salvaFicheroBin("/foto.jpg","/foto.jpg.bak",fb->buf, fb->len); // payload (image), payload length
+
+    webSocket.sendTXT(cliente, "depurador: foto guardada en la SD");
+    }
   }
 
 /**********************************************/
@@ -429,12 +645,12 @@ void webSocketEvent(uint8_t clienteId, WStype_t type, uint8_t * payload, size_t 
         String datos="";
         for(uint8_t i=0;i<length;i++) datos+=(char)payload[i];
 
-        Serial.printf("[%u] envia el texto: %s | datos: %s\n", clienteId, payload,datos.c_str());
+        Serial.printf("[%u] recibido el texto: %s | datos: %s\n", clienteId, payload,datos.c_str());
         gestionaMensajes(clienteId,datos);
         }
         break;
     case WStype_BIN:
-        Serial.printf("[%u] enviadatos bynarios length: %u\n", clienteId, length);
+        Serial.printf("[%u] recibidos datos binarios length: %u\n", clienteId, length);
         hexdump(payload, length);
 
         // send message to client

@@ -132,6 +132,11 @@ body {
   <div class="buttons">
     <button id="delete_all">Borra todas</button>
   </div> 
+  <div class="buttons">
+    <button id="button-serialize" class="left">Serialize</button>
+    <button id="button-foto" class="right">Foto</button>    
+  </div>
+  <div class="status-display"> <span id="depurador"></span> </div>
 </div>
 <script>
 document.addEventListener("DOMContentLoaded", function(event) {
@@ -145,6 +150,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
   const streamButton = document.getElementById("button-stream");
   const captureButton = document.getElementById("button-capture");
   const deleteAllButton = document.getElementById("delete_all");
+  const serializeButton=document.getElementById("button-serialize");
+  const fotoButton=document.getElementById("button-foto");
 
   ws.onopen = () => {
     console.log(`Connected to ${WS_URL}`);
@@ -158,6 +165,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
         addFaceToScreen(message.data.substr(9));
       } else if (message.data == "delete_faces") {
         deleteAllFacesFromScreen();
+      } else if (message.data.substr(0, 10) == "depurador:") {
+        document.getElementById("depurador").innerHTML = message.data;
       } else {
         document.getElementById("current-status").innerHTML = message.data;
       }
@@ -171,6 +180,14 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
   streamButton.onclick = () => {
     ws.send("stream");
+  };
+
+  serializeButton.onclick = () => {
+    ws.send("serialize");
+  };
+
+  fotoButton.onclick = () => {
+    ws.send("foto");
   };
 
   captureButton.onclick = () => {

@@ -1,47 +1,39 @@
 /************************************************/
 /*                                              */
 /* Funciones para la gestion de ficheros en     */
-/* memoria del modulo esp6288                   */
+/* tarjeta SD del modulo esp32-CAM              */
 /*                                              */
 /************************************************/
 
 /***************************** Defines *****************************/
-#ifndef _SISTEMA_FICHEROS_
-#define _SISTEMA_FICHEROS_
+#ifndef _SISTEMA_FICHEROS_SD_
+#define _SISTEMA_FICHEROS_SD_
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
 
 /***************************** Includes *****************************/
 
-class SistemaFicherosClass
+class SistemaFicherosSDClass
   {
-  private:
-    boolean candado; //Candado de configuracion. true implica que la ultima configuracion fue mal
-
   public:
-    SistemaFicherosClass() {};
+    SistemaFicherosSDClass() {};
     boolean inicializaFicheros(int debug);
 
-    boolean leeFicheroConfig(String nombre, String &contenido);
-    boolean salvaFicheroConfig(String nombreFichero, String nombreFicheroBak, String contenidoFichero);
+    boolean SDDisponible(void);
+
     boolean leeFicheroBin(String nombre, uint8_t *contenido,uint8_t inicio, uint16_t len); //devuelve len bytes desde inicio del fichero indicado donde apunte el puntero indicado. El puntero debe tener memoria asignada suficiente
     boolean salvaFicheroBin(String nombreFichero, String nombreFicheroBak, uint8_t *contenidoFichero, uint16_t len);
     boolean leeFichero(String nombre, String &contenido);
     boolean salvaFichero(String nombreFichero, String nombreFicheroBak, String contenidoFichero);
-    
+
     boolean borraFichero(String nombreFichero);
-    boolean existeFichero(String nombre);
     uint16_t tamanoFichero(String nombreFichero);
-    
+    boolean existeFichero(String nombre);
+
     boolean listaFicheros(String &contenido);
-
-    boolean formatearFS(void);
-
-    boolean setCandado(void);
-    boolean getCandado(void);
   };
 
-extern SistemaFicherosClass SistemaFicheros;
+extern SistemaFicherosSDClass SistemaFicherosSD;
 
 #endif

@@ -1,7 +1,7 @@
 /************************************************/
 /*                                              */
 /* Funciones para la gestion de ficheros en     */
-/* memoria del modulo esp6288                   */
+/* tarjeta SD del modulo esp32-CAM              */
 /*                                              */
 /************************************************/
 
@@ -10,64 +10,50 @@
 
 /***************************** Includes *****************************/
 #include <Global.h>
-#include <SistemaFicheros.h>
+#include <SistemaFicherosSD.h>
 #include <FS.h>     //this needs to be first, or it all crashes and burns...
-#include <SPIFFS.h> //para el ESP32
+#include "SD_MMC.h" // SD Card ESP32-CAM
 /***************************** Includes *****************************/
 
 /************************************************/
 /* Inicializa el sistema de ficheros del modulo */
 /************************************************/
-boolean SistemaFicherosClass::inicializaFicheros(int debug)
+boolean SistemaFicherosSDClass::inicializaFicheros(int debug)
 {
-  //inicializo el sistema de ficheros
-  if (!SPIFFS.begin(true)) 
+  //inicializo el sistema de ficheros de la tarjeta SD
+  if (!SD_MMC.begin()) 
     {
-    Serial.println("No se puede inicializar el sistema de ficheros");
+    Serial.println("Tarjeta SD no disponible");
     return (false);
     }
-  this->candado=false; //Candado de configuracion. true implica que la ultima configuracion fue mal
 
   return (true);
 }
 
 /************************************************/
-/* Recupera los datos de configuracion          */
-/* de un archivo, si hay bloqyueo de            */
-/* configuracion, devuelve KO                   */
+/* Responde true si el sistema de ficheros de   */ 
+/* la tarjeta SD esta disponible                */
 /************************************************/
-boolean SistemaFicherosClass::leeFicheroConfig(String nombre, String &contenido)
+boolean SistemaFicherosSDClass::SDDisponible(void)
   {
-  if(this->candado) return false; //la utima configuracion fue mal, los ficheros no valen. Tomamos configuracion pro defecto en todos los modulos
-  return (leeFichero(nombre, contenido));  
-  }
-
-/************************************************/
-/* Salva los datos de configuracion             */
-/* de un archivo, si hay bloqyueo de            */
-/* configuracion, devuelve KO                   */
-/************************************************/
-boolean SistemaFicherosClass::salvaFicheroConfig(String nombreFichero, String nombreFicheroBak, String contenidoFichero)
-  {
-  if(this->candado) return false; //la utima configuracion fue mal, los ficheros no valen. Tomamos configuracion pro defecto en todos los modulos
-  return (salvaFichero(nombreFichero, nombreFicheroBak, contenidoFichero));  
+  return SD_MMC.begin();
   }
 
 /************************************************/
 /* Recupera los datos de                        */
 /* de un archivo cualquiera                     */
 /************************************************/
-boolean SistemaFicherosClass::leeFichero(String nombre, String &contenido)
+boolean SistemaFicherosSDClass::leeFichero(String nombre, String &contenido)
   {
   boolean leido=false;
   
   Serial.println("Inicio de lectura de fichero " + nombre);
 
-  if (SPIFFS.exists(nombre)) 
+  if (SD_MMC.exists(nombre)) 
     {
     //file exists, reading and loading
     Serial.printf("Encontrado fichero de configuracion %s.\n",nombre.c_str());
-    File configFile = SPIFFS.open(nombre, "r");
+    File configFile = SD_MMC.open(nombre, "r");
     if (configFile) 
       {
       if(debugGlobal) Serial.printf("Abierto fichero de configuracion %s.\n",configFile.name());
@@ -98,19 +84,19 @@ boolean SistemaFicherosClass::leeFichero(String nombre, String &contenido)
 /* Salva la cadena pasada al fichero especificado                     */
 /* Si ya existe lo sobreescribe                                       */
 /**********************************************************************/  
-boolean SistemaFicherosClass::salvaFichero(String nombreFichero, String nombreFicheroBak, String contenidoFichero)
+boolean SistemaFicherosSDClass::salvaFichero(String nombreFichero, String nombreFicheroBak, String contenidoFichero)
   {
   boolean salvado=false;
 
   //file exists, reading and loading
-  if(SPIFFS.exists(nombreFichero.c_str())) 
+  if(SD_MMC.exists(nombreFichero.c_str())) 
     {
     if(nombreFicheroBak!="")
       {
       Serial.printf("El fichero %s ya existe, se copiara con el nombre %s.\n",nombreFichero.c_str(),nombreFicheroBak.c_str());
         
-      if(SPIFFS.exists(nombreFicheroBak.c_str())) SPIFFS.remove(nombreFicheroBak.c_str());  
-      SPIFFS.rename(nombreFichero.c_str(),nombreFicheroBak.c_str());  
+      if(SD_MMC.exists(nombreFicheroBak.c_str())) SD_MMC.remove(nombreFicheroBak.c_str());  
+      SD_MMC.rename(nombreFichero.c_str(),nombreFicheroBak.c_str());  
       }
     else Serial.printf("El fichero %s ya existe, sera sobreescrito.\n",nombreFichero.c_str());
     }
@@ -120,7 +106,7 @@ boolean SistemaFicherosClass::salvaFichero(String nombreFichero, String nombreFi
   Serial.print("Contenido fichero: ");
   Serial.println(contenidoFichero.c_str());
    
-  File newFile = SPIFFS.open(nombreFichero.c_str(), FILE_WRITE);//abro el fichero, si existe lo borra
+  File newFile = SD_MMC.open(nombreFichero.c_str(), FILE_WRITE);//abro el fichero, si existe lo borra
   if (newFile) 
     {
     Serial.printf("Abierto fichero %s.\nGuardo contenido:\n#%s#\n",newFile.name(),contenidoFichero.c_str());
@@ -139,15 +125,15 @@ boolean SistemaFicherosClass::salvaFichero(String nombreFichero, String nombreFi
 /****************************************************/
 /* Borra el fichero especificado                    */
 /****************************************************/  
-boolean SistemaFicherosClass::borraFichero(String nombreFichero)
+boolean SistemaFicherosSDClass::borraFichero(String nombreFichero)
   {
   boolean borrado=false;
 
   //file exists, reading and loading
-  if(!SPIFFS.exists(nombreFichero)) Serial.println("El fichero " + nombreFichero + " no existe.");
+  if(!SD_MMC.exists(nombreFichero)) Serial.println("El fichero " + nombreFichero + " no existe.");
   else
     {
-    if (SPIFFS.remove(nombreFichero)) 
+    if (SD_MMC.remove(nombreFichero)) 
       {
       borrado=true;
       Serial.println("El fichero " + nombreFichero + " ha sido borrado.");
@@ -163,11 +149,11 @@ boolean SistemaFicherosClass::borraFichero(String nombreFichero)
 /* dispositivo. Devuelve una cadena separada    */
 /* por SEPARADOR                                */
 /************************************************/
-boolean SistemaFicherosClass::listaFicheros(String &contenido)
+boolean SistemaFicherosSDClass::listaFicheros(String &contenido)
   {   
   contenido="";
 
-  File root = SPIFFS.open("/");
+  File root = SD_MMC.open("/");
   File file = root.openNextFile();
  
   while(file)
@@ -188,54 +174,26 @@ boolean SistemaFicherosClass::listaFicheros(String &contenido)
 /* Devuelve si existe o no un fichero en el     */
 /* dispositivo                                  */
 /************************************************/
-boolean SistemaFicherosClass::existeFichero(String nombre)
+boolean SistemaFicherosSDClass::existeFichero(String nombre)
   {  
-  return (SPIFFS.exists(nombre));
-  }
-
-
-/************************************************/
-/* Formatea el sistemas de ficheros del         */
-/* dispositivo                                  */
-/************************************************/
-boolean SistemaFicherosClass::formatearFS(void)
-  {  
-  return (SPIFFS.format());
-  }
-
-/**************************************************/
-/* Si existe el fichero candado activa el candado */
-/**************************************************/
-boolean SistemaFicherosClass::setCandado(void) 
-  {
-    if(SistemaFicheros.existeFichero(FICHERO_CANDADO)) this->candado= true;       
-    else this->candado= false;
-    return this->candado;
-  }
-
-/************************************************/
-/* Devuelve el valor del candado                */
-/************************************************/
-boolean SistemaFicherosClass::getCandado(void) 
-  {
-    return this->candado;
+  return (SD_MMC.exists(nombre));
   }
 
 /************************************************/
 /* Recupera los datos de un archivo binario     */
 /************************************************/
-boolean SistemaFicherosClass::leeFicheroBin(String nombre, uint8_t *contenido,uint8_t inicio, uint16_t len)
+boolean SistemaFicherosSDClass::leeFicheroBin(String nombre, uint8_t *contenido,uint8_t inicio, uint16_t len)
   {
   boolean leido=false;
   size_t size=0;
 
   if(debugGlobal) Serial.println("Inicio de lectura de fichero binario" + nombre);
 
-  if (SPIFFS.exists(nombre)) 
+  if (SD_MMC.exists(nombre)) 
     {
     //file exists, reading and loading
     if(debugGlobal) Serial.printf("Encontrado fichero binario %s.\n",nombre.c_str());
-    File binaryfile = SPIFFS.open(nombre, "r");
+    File binaryfile = SD_MMC.open(nombre, "r");
     if (binaryfile) 
       {
       Serial.printf("Abierto fichero binario %s.\n",binaryfile.name());
@@ -265,19 +223,19 @@ boolean SistemaFicherosClass::leeFicheroBin(String nombre, uint8_t *contenido,ui
 /* Salva la cadena pasada al fichero especificado                     */
 /* Si ya existe lo sobreescribe                                       */
 /**********************************************************************/  
-boolean SistemaFicherosClass::salvaFicheroBin(String nombreFichero, String nombreFicheroBak, uint8_t *contenidoFichero, uint16_t len)
+boolean SistemaFicherosSDClass::salvaFicheroBin(String nombreFichero, String nombreFicheroBak, uint8_t *contenidoFichero, uint16_t len)
   {
   boolean salvado=false;
 
   //file exists, reading and loading
-  if(SPIFFS.exists(nombreFichero.c_str())) 
+  if(SD_MMC.exists(nombreFichero.c_str())) 
     {
     if(nombreFicheroBak!="")
       {
       Serial.printf("El fichero %s ya existe, se copiara con el nombre %s.\n",nombreFichero.c_str(),nombreFicheroBak.c_str());
         
-      if(SPIFFS.exists(nombreFicheroBak.c_str())) SPIFFS.remove(nombreFicheroBak.c_str());  
-      SPIFFS.rename(nombreFichero.c_str(),nombreFicheroBak.c_str());  
+      if(SD_MMC.exists(nombreFicheroBak.c_str())) SD_MMC.remove(nombreFicheroBak.c_str());  
+      SD_MMC.rename(nombreFichero.c_str(),nombreFicheroBak.c_str());  
       }
     else Serial.printf("El fichero %s ya existe, sera sobreescrito.\n",nombreFichero.c_str());
     }
@@ -285,12 +243,11 @@ boolean SistemaFicherosClass::salvaFicheroBin(String nombreFichero, String nombr
   Serial.printf("Nombre fichero: %s\n",nombreFichero.c_str());
   Serial.printf("Longitud del contenido: %i\n",len);
    
-  File newFile = SPIFFS.open(nombreFichero.c_str(), FILE_WRITE);//abro el fichero, si existe lo borra
+  File newFile = SD_MMC.open(nombreFichero.c_str(), FILE_WRITE);//abro el fichero, si existe lo borra
   if (newFile) 
     {
     Serial.printf("Abierto fichero %s.\nGuardo %i bytes\n",newFile.name(),len);
     newFile.write(contenidoFichero,len);
-    Serial.printf("Escritos %i bytes al fichero\n",newFile.size());
     newFile.close();//cierro el fichero    
     Serial.println("Cierro el fichero");
     salvado=true;
@@ -303,11 +260,11 @@ boolean SistemaFicherosClass::salvaFicheroBin(String nombreFichero, String nombr
 /**********************************************************************/
 /* Devuelve el tamaño del fichero indicado                           */
 /**********************************************************************/  
-uint16_t SistemaFicherosClass::tamanoFichero(String nombreFichero)
+uint16_t SistemaFicherosSDClass::tamanoFichero(String nombreFichero)
   {
-  if(SPIFFS.exists(nombreFichero.c_str()))
+  if(SD_MMC.exists(nombreFichero.c_str()))
     {
-    File newFile = SPIFFS.open(nombreFichero.c_str(), "r");
+    File newFile = SD_MMC.open(nombreFichero.c_str(), "r");
     if(newFile) return newFile.size();
     }
 
@@ -315,4 +272,4 @@ uint16_t SistemaFicherosClass::tamanoFichero(String nombreFichero)
   }
 
 //Declaro la instancia unica
-SistemaFicherosClass SistemaFicheros;
+SistemaFicherosSDClass SistemaFicherosSD; 

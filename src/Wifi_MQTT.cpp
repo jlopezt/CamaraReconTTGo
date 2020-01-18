@@ -173,7 +173,8 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length)
   if(cad==String(miMQTT.gettopicRoot() + "/" + miMQTT.getID_MQTT() + "/entradas")) return;
   if(cad==String(miMQTT.gettopicRoot() + "/" + miMQTT.getID_MQTT() + "/salidas")) return;  
 
-  if(cad.substring(0,String(miMQTT.gettopicRoot() + "/" + miMQTT.getID_MQTT()).length())!=String(miMQTT.gettopicRoot() + "/" + miMQTT.getID_MQTT())) //no deberia, solo se suscribe a los suyos
+  if(cad.equalsIgnoreCase(TOPIC_PING)) miMQTT.respondePingMQTT(topic,payload,length);
+  else if(cad.substring(0,String(miMQTT.gettopicRoot() + "/" + miMQTT.getID_MQTT()).length())!=String(miMQTT.gettopicRoot() + "/" + miMQTT.getID_MQTT())) //no deberia, solo se suscribe a los suyos
     {
     Serial.printf("Valor de String(topicRoot + ID_MQTT).length()\n topicRoot: #%s#\nID_MQTT: #%s#\nlongitud: %i\n",miMQTT.gettopicRoot().c_str(),miMQTT.getID_MQTT().c_str(),String(miMQTT.gettopicRoot() + miMQTT.getID_MQTT()).length());
     Serial.printf("Subcadena cad.substring(0,String(topicRoot + ID_MQTT).length()): %s\n",cad.substring(0,String(miMQTT.gettopicRoot() + miMQTT.getID_MQTT()).length()).c_str());
@@ -184,23 +185,7 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length)
     }  
   else//topic correcto
     {  
-    if(cad.equalsIgnoreCase(TOPIC_PING)) miMQTT.respondePingMQTT(topic,payload,length);   
-    /* No espera ningun mensaje  
-    //copio el payload en la cadena mensaje
-    char mensaje[length+1];
-    for(int8_t i=0;i<length;i++) mensaje[i]=payload[i];
-    mensaje[length]=0;//añado el final de cadena 
-    if(debugGlobal) Serial.printf("MQTT mensaje recibido: %s\nmensaje copiado %s\n",payload,mensaje);
-  
-    //**********************Leo el JSON***********************
-    const size_t bufferSize = JSON_OBJECT_SIZE(3) + 50;
-    DynamicJsonBuffer jsonBuffer(bufferSize);     
-    JsonObject& root = jsonBuffer.parseObject(mensaje);
-    if (root.success()) 
-      {  
-      }
-    //*********************Fin leo JSON**********************
-    */
+    //No espero nada...
     }
   }
 
@@ -225,8 +210,14 @@ boolean miMQTTClass::conectaMQTT(void)
       if(debugGlobal) Serial.println("conectado");
       //Inicio la subscripcion al topic de todolo que empiece por <topicRoot>/<ID_MQTT>/<WILDCARD_ALL> boolean subscribe(const char* topic);
       String topic = topicRoot + "/" + ID_MQTT + "/" + WILDCARD_ALL; 
-      if (clienteMQTT.subscribe(topic.c_str())) Serial.printf("Subscrito al topic %s\n", topic.c_str());
+      if (clienteMQTT.subscribe(topic.c_str())) Serial.printf("-->Subscrito al topic %s\n", topic.c_str());
       else Serial.printf("Error al subscribirse al topic %s\n", topic.c_str());       
+
+      //Suscripcion al topic de ping
+      topic=TOPIC_PING;
+      if (clienteMQTT.subscribe(topic.c_str())) Serial.printf("-->Subscrito al topic %s\n", topic.c_str());
+      else Serial.printf("Error al subscribirse al topic %s\n", topic.c_str());
+
       return(true);
       }
 
