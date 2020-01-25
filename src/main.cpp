@@ -17,6 +17,7 @@
 #define FRECUENCIA_SALIDAS                5 //cada cuantas vueltas de loop atiende las salidas
 #define FRECUENCIA_SECUENCIADOR          10 //cada cuantas vueltas de loop atiende al secuenciador
 #define FRECUENCIA_SERVIDOR_WEB           1 //cada cuantas vueltas de loop atiende el servidor web
+#define FRECUENCIA_SERVIDOR_FTP           1 //cada cuantas vueltas de loop atiende el servidor ftp
 #define FRECUENCIA_MQTT                  10 //cada cuantas vueltas de loop envia y lee del broker MQTT
 #define FRECUENCIA_ENVIO_DATOS           50 //cada cuantas vueltas de loop envia al broker el estado de E/S
 #define FRECUENCIA_ORDENES                2 //cada cuantas vueltas de loop atiende las ordenes via serie 
@@ -53,7 +54,7 @@ void setup()
 
   Serial.printf("\n\nInit Ficheros ---------------------------------------------------------------------\n");
   //Ficheros - Lo primero para poder leer los demas ficheros de configuracion
-  SistemaFicheros.inicializaFicheros(debugGlobal);
+  if(!SistemaFicheros.inicializaFicheros(debugGlobal))Serial.println("Error al inicializar el sistema de ficheros");
   if(!SistemaFicherosSD.inicializaFicheros(debugGlobal)) Serial.println("Error al inicializar la SD");
 
   //Compruebo si existe candado, si existe la ultima configuracion fue mal
@@ -92,6 +93,9 @@ void setup()
     //WebServer
     Serial.println("\n\nInit Web --------------------------------------------------------------------------\n");
     inicializaWebServer();
+    //FTPServer
+    Serial.println("\n\nInit FTP --------------------------------------------------------------------------\n");
+    ftpSrv.inicializaFTP(0);
     }
   else Serial.println("No se pudo conectar al WiFi");
 
@@ -153,6 +157,7 @@ void loop()
   //if ((vuelta % FRECUENCIA_SECUENCIADOR)==0) Secuenciador.actualizaSecuenciador(debugGlobal); //Actualiza la salida del secuenciador
   //Prioridad 3: Interfaces externos de consulta    
   if ((vuelta % FRECUENCIA_SERVIDOR_WEB)==0) webServer(debugGlobal); //atiende el servidor web
+  if ((vuelta % FRECUENCIA_SERVIDOR_FTP)==0) ftpSrv.handleFTP(); //atiende el servidor ftp
   if ((vuelta % FRECUENCIA_SERVIDOR_WEB)==0) atiendeWebsocket();
   if ((vuelta % FRECUENCIA_MQTT)==0) miMQTT.atiendeMQTT(debugGlobal);      
   if ((vuelta % FRECUENCIA_ENVIO_DATOS)==0) miMQTT.enviaDatos(debugGlobal); //publica via MQTT los datos de entradas y salidas, segun configuracion

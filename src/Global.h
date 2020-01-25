@@ -26,6 +26,8 @@
 #define WIFI_CONFIG_BAK_FILE             "/WiFiConfig.json.bak"
 #define MQTT_CONFIG_FILE                 "/MQTTConfig.json"
 #define MQTT_CONFIG_BAK_FILE             "/MQTTConfig.json.bak"
+#define FTP_CONFIG_FILE                  "/FTPConfig.json"
+#define FTP_CONFIG_BAK_FILE              "/FTPConfig.json.bak"
 #define SECUENCIADOR_CONFIG_FILE         "/SecuenciadorConfig.json"
 #define SECUENCIADOR_CONFIG_BAK_FILE     "/SecuenciadorConfig.json.bak"
 #define FACE_RECON_CONFIG_FILE           "/FaceReconConfig.json"
@@ -51,6 +53,7 @@
 
 /***************************** Includes *****************************/
 #include <Arduino.h>
+#include <FtpServer.h>
 #include <SistemaFicheros.h>
 #include <SistemaFicherosSD.h>
 #include <ArduinoJson.h>

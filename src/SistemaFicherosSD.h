@@ -8,6 +8,8 @@
 /***************************** Defines *****************************/
 #ifndef _SISTEMA_FICHEROS_SD_
 #define _SISTEMA_FICHEROS_SD_
+
+#define MONTAJE_SD "/SD"
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
@@ -17,7 +19,7 @@
 class SistemaFicherosSDClass
   {
   public:
-    SistemaFicherosSDClass() {};
+    SistemaFicherosSDClass(){};
     boolean inicializaFicheros(int debug);
 
     boolean SDDisponible(void);

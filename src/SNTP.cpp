@@ -68,8 +68,6 @@ relojClass::relojClass(){}
 /****************************************************/
 void relojClass::inicializaReloj(void)
   {
-  Serial.printf("\n\nInit SNTP ----------------------------------------------------------------------\n");
-
   configTzTime(TZ_INFO, NTP_SERVER);
   
   if (getLocalTime(&timeinfo, 10000))  // wait up to 10sec to sync

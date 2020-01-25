@@ -41,6 +41,9 @@
 //Adicionales por WebSockets
 //#include <ArduinoWebsockets.h>
 #include <WebSocketsServer.h>
+
+#include <FS.h>
+#include <SD_MMC.h>
 /***************************** Includes *****************************/
 
 /********************** Face recon **********************/
@@ -567,7 +570,8 @@ void gestionaMensajes(uint8_t cliente, String mensaje) //Tiene que implementar l
 		{
     char person[ENROLL_NAME_LEN * FACE_ID_SAVE_NUMBER];
     mensaje.substring(7).toCharArray(person, sizeof(person));
-    delete_face_id_in_flash_with_name(&st_face_list, person);
+    //delete_face_id_in_flash_with_name(&st_face_list, person);
+    delete_face_with_name(&st_face_list, person);
     Serial.println("Enviado nueva lista de caras");
     send_face_list(); // reset faces in the browser
  	  }
@@ -590,9 +594,10 @@ void gestionaMensajes(uint8_t cliente, String mensaje) //Tiene que implementar l
   if (mensaje == "foto")  
     {
     Serial.println("Guardando  foto en la SD...");
-    SistemaFicherosSD.salvaFicheroBin("/foto.jpg","/foto.jpg.bak",fb->buf, fb->len); // payload (image), payload length
-
-    webSocket.sendTXT(cliente, "depurador: foto guardada en la SD");
+    webSocket.sendTXT(cliente, "foto");
+    webSocket.sendBIN(cliente,fb->buf, fb->len);//uint8_t num, const uint8_t * payload, size_t length);
+    //SistemaFicherosSD.salvaFicheroBin("/SD/foto.jpg","/foto.jpg.bak",fb->buf, fb->len); // payload (image), payload length
+    //webSocket.sendTXT(cliente, "depurador: foto guardada en la SD");
     }
   }
 

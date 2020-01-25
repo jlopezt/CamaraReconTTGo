@@ -114,6 +114,7 @@ body {
 <body>
 <div id="content-left">
   <div id="stream-container" class="image-container"> <img id="stream" src=""> </div>
+  <div id="foto-container" class="image-container"> <img id="foto" src=""> </div>
 </div>
 <div id="content-right">
   <div class="status-display"> <span id="current-status"></span> </div>
@@ -146,12 +147,15 @@ document.addEventListener("DOMContentLoaded", function(event) {
   const ws = new WebSocket(WS_URL);
 
   const view = document.getElementById("stream");
+  const viewfoto = document.getElementById("foto");
   const personFormField = document.getElementById("person");
   const streamButton = document.getElementById("button-stream");
   const captureButton = document.getElementById("button-capture");
   const deleteAllButton = document.getElementById("delete_all");
   const serializeButton=document.getElementById("button-serialize");
   const fotoButton=document.getElementById("button-foto");
+
+  var flagFoto=false;
 
   ws.onopen = () => {
     console.log(`Connected to ${WS_URL}`);
@@ -173,13 +177,24 @@ document.addEventListener("DOMContentLoaded", function(event) {
     }
     if (message.data instanceof Blob) {
       console.log('se han recibido datos binarios');
-      var urlObject = URL.createObjectURL(message.data);
-      view.src = urlObject;
+      if(flagFoto==true)
+        {       
+          console.log('¡¡¡Es una foto!!!');   
+        flagFoto=false;  
+        var urlObject = URL.createObjectURL(message.data);
+        viewfoto.src = urlObject;
+        }
+      else
+        {
+        var urlObject = URL.createObjectURL(message.data);
+        view.src = urlObject;
+        }
     }
   };
 
   streamButton.onclick = () => {
     ws.send("stream");
+    flagFoto=false;  
   };
 
   serializeButton.onclick = () => {
@@ -188,6 +203,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
   fotoButton.onclick = () => {
     ws.send("foto");
+    flagFoto=true;
   };
 
   captureButton.onclick = () => {
