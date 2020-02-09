@@ -8,7 +8,7 @@
 
 //Defines generales
 #define NOMBRE_FAMILIA   "Camara servomotorizada"
-#define VERSION          "1.1.0 (ESP32 1.0.2|Migracion C++|OTA|MQTT|FicherosWeb)"
+#define VERSION          "1.2.0 (ESP32 1.0.4|Migracion C++|OTA|MQTT|FicherosWeb|FTP)"
 #define SEPARADOR        '|'
 #define SUBSEPARADOR     '#'
 #define KO               -1

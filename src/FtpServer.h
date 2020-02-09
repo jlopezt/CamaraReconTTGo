@@ -26,6 +26,12 @@
  *******************************************************************************/
 
 /***************************** Defines *****************************/
+// Uncomment to print debugging info to console attached to ESP8266
+//#define FTP_DEBUG
+
+#ifndef _SERVIDOR_FTP_
+#define _SERVIDOR_FTP_
+
 #define FTP_SERVER_VERSION "FTP-2017-10-18"
 
 #define FTP_CTRL_PORT    21          // Command port on wich server is listening  
@@ -40,12 +46,6 @@
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
-// Uncomment to print debugging info to console attached to ESP8266
-//#define FTP_DEBUG
-
-#ifndef _SERVIDOR_FTP_
-#define _SERVIDOR_FTP_
-
 //#include <Global.h>
 //#include "Streaming.h"
 #include <FS.h>

@@ -1,6 +1,6 @@
 {
     "board": "esp32:esp32:esp32cam",
-    "configuration": "PartitionScheme=rzo_partition",
+    "configuration": "PartitionScheme=Aplicacion_OTA",
     "port": "COM4",
     "programmer": "AVRISP mkII"
 }

@@ -140,7 +140,7 @@ body {
   <div class="status-display"> <span id="depurador"></span> </div>
 </div>
 <script>
-  document.addEventListener("DOMContentLoaded", function(event) {
+document.addEventListener("DOMContentLoaded", function(event) {
   var baseHost = document.location.origin;
   var streamUrl = baseHost + ":81";
   const WS_URL = "ws://" + window.location.host + ":88";
@@ -179,7 +179,7 @@ body {
       console.log('se han recibido datos binarios');
       if(flagFoto==true)
         {       
-          console.log('Â¡Â¡Â¡Es una foto!!!');   
+          console.log('¡¡¡Es una foto!!!');   
         flagFoto=false;  
         var urlObject = URL.createObjectURL(message.data);
         viewfoto.src = urlObject;

@@ -22,6 +22,7 @@ Informacion del Hw del sistema http://IP/info
 #include <Global.h>
 #include <ServidorWeb.h>
 #include <WebServer.h> //#include <ESP8266WebServer.h>
+#include <OTA.h>
 /***************************** Includes *****************************/
 
 //Prototipo de funciones
@@ -31,9 +32,9 @@ bool handleFileRead(String path);
 WebServer server(PUERTO_WEBSERVER); //ESP8266WebServer server[MAX_WEB_SERVERS];
 
 //Cadenas HTML precargadas
-String cabeceraHTML="<HTML><HEAD><TITLE>" + cacharro.getNombreDispositivo() + "</TITLE></HEAD><BODY>";
+String cabeceraHTML="";//Se inicializa en  funcion inicializaWebServer "<HTML><HEAD><TITLE>" + cacharro.getNombreDispositivo() + "</TITLE></HEAD><BODY>";
 String pieHTML="</BODY></HTML>";
-String enlaces="<TABLE>\n<CAPTION>Enlaces</CAPTION>\n<TR><TD><a href=\"info\" target=\"_blank\">Info</a></TD></TR>\n<TR><TD><a href=\"test\" target=\"_blank\">Test</a></TD></TR>\n<TR><TD><a href=\"restart\" target=\"_blank\">Restart</a></TD></TR>\n<TR><TD><a href=\"estado\" target=\"_blank\">Estado</a></TD></TR>\n<TR><TD><a href=\"listaFicheros\" target=\"_blank\">Lista ficheros</a></TD></TR>\n<TR><TD><a href=\"estadoSalidas\" target=\"_blank\">Estado salidas</a></TD></TR>\n<TR><TD><a href=\"estadoEntradas\" target=\"_blank\">Estado entradas</a></TD></TR>\n<TR><TD><a href=\"planes\" target=\"_blank\">Planes del secuenciador</a></TD></TR></TABLE>\n"; 
+String enlaces="<TABLE>\n<CAPTION>Enlaces</CAPTION>\n<TR><TD><a href=\"info\" target=\"_self\">Info</a></TD></TR>\n<TR><TD><a href=\"test\" target=\"_self\">Test</a></TD></TR>\n<TR><TD><a href=\"restart\" target=\"_self\">Restart</a></TD></TR>\n<TR><TD><a href=\"estado\" target=\"_self\">Estado</a></TD></TR>\n<TR><TD><a href=\"particiones\" target=\"_self\">Particiones</a></TD></TR>\n<TR><TD><a href=\"listaFicheros\" target=\"_self\">Lista ficheros</a></TD></TR>\n<TR><TD><a href=\"estadoSalidas\" target=\"_self\">Estado salidas</a></TD></TR>\n<TR><TD><a href=\"estadoEntradas\" target=\"_self\">Estado entradas</a></TD></TR>\n<TR><TD><a href=\"planes\" target=\"_self\">Planes del secuenciador</a></TD></TR></TABLE>\n"; 
 
 /*******************************************************/
 /*                                                     */ 
@@ -58,7 +59,7 @@ void handleRoot()
   String orden="";
 
   //genero la respuesta por defecto  
-  cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
+  //cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
   cad += "<BR>\n";
  
   //Enlaces
@@ -91,7 +92,7 @@ void handleEstado(void)
 void handleTest(void)
   {
   String cad=cabeceraHTML;
-  cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
+  //cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
   
   cad += "Test OK<br>";
   cad += pieHTML;
@@ -108,7 +109,7 @@ void handleTest(void)
 void handleRestart(void)
   {
   String cad=cabeceraHTML;
-  cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
+  //cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
   
   cad += "Reiniciando...<br>";
   cad += pieHTML;
@@ -127,7 +128,7 @@ void handleRestart(void)
 void handleInfo(void)
   {
   String cad=cabeceraHTML;
-  cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
+  //cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
 
   cad+= "<BR>-----------------Uptime---------------------<BR>";
   char tempcad[20]="";
@@ -185,6 +186,43 @@ void handleInfo(void)
 
 /*********************************************/
 /*                                           */
+/*  Pinta la lista de particiones en         */
+/*  memoria                                  */ 
+/*                                           */
+/*********************************************/  
+void handleParticiones(void)
+  {
+  String cad=cabeceraHTML;
+  //cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
+
+  cad +=pintaParticionHTML();
+
+  cad += pieHTML;
+  server.send(200, "text/html", cad);     
+  }
+
+/*********************************************/
+/*                                           */
+/*    Cambia la particion de arranque        */
+/*                                           */
+/*********************************************/  
+void handleSetNextBoot(void)
+  {
+  String cad=cabeceraHTML;
+  //cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
+
+  if(server.hasArg("p")) //si existen esos argumentos
+    {
+    if(setParticionProximoArranque(server.arg("p"))) cad += "EXITO";
+    else cad += "FRACASO";
+    }
+
+  cad += pieHTML;
+  server.send(200, "text/html", cad);     
+  }
+
+/*********************************************/
+/*                                           */
 /*  Lista los ficheros en el sistema a       */
 /*  traves de una peticion HTTP              */ 
 /*                                           */
@@ -195,7 +233,7 @@ void handleListaFicheros(void)
   String nombreFichero="";
   String contenidoFichero="";
 
-  cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
+  //cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
   cad += "<h2>Lista de ficheros</h2>";
 
   //Variables para manejar la lista de ficheros
@@ -219,22 +257,16 @@ void handleListaFicheros(void)
 
       cad += "<TR><TD>" + fichero + "</TD>";           
       cad += "<TD>";
-      cad += "<form action=\"manageFichero\" target=\"_blank\">";
+      cad += "<form action=\"manageFichero\" target=\"_self\">";
       cad += "    <input type=\"hidden\" name=\"nombre\" value=\"" + fichero + "\">";
       cad += "    <input type=\"submit\" value=\"editar\">";
       cad += "</form>";
       cad += "</TD><TD>";
-      cad += "<form action=\"copiarFicheroSD\" target=\"_blank\">";
-      cad += "    <input type=\"hidden\" name=\"nombre\" value=\"" + fichero + "\">";
-      cad += "    <input type=\"submit\" value=\"copiarSD\">";
-      cad += "</form>";
-      cad += "</TD><TD>";
-      cad += "<form action=\"borraFichero\" target=\"_blank\">";
+      cad += "<form action=\"borraFichero\" target=\"_self\">";
       cad += "    <input type=\"hidden\" name=\"nombre\" value=\"" + fichero + "\">";
       cad += "    <input type=\"submit\" value=\"borrar\">";
       cad += "</form>";
       cad += "</TD></TR>";
-      //cad += "<TR><TD><a href=\"borraFichero?nombre="+ fichero +"\" target=\"_blank\">borrar</a></TD><TD><a href=\"manageFichero?nombre="+ fichero +"\" target=\"_blank\">" + fichero + "</a></TD></TR>\n";           
       }
     cad += "</TABLE>\n";
     cad += "<BR>";
@@ -242,7 +274,7 @@ void handleListaFicheros(void)
     //Para crear un fichero nuevo
     cad += "<h2>Crear un fichero nuevo:</h2>";
     cad += "<table><tr><td>";      
-    cad += "<form action=\"creaFichero\" target=\"_blank\">";
+    cad += "<form action=\"creaFichero\" target=\"_self\">";
     cad += "  <p>";
     cad += "    Nombre:<input type=\"text\" name=\"nombre\" value=\"\">";
     cad += "    <BR>";
@@ -260,147 +292,6 @@ void handleListaFicheros(void)
 
 /*********************************************/
 /*                                           */
-/*  Lista los ficheros de la tarjeta SD      */
-/*  atraves de una peticion HTTP             */ 
-/*                                           */
-/*********************************************/  
-void handleListaFicherosSD(void)
-  {
-  String cad=cabeceraHTML;
-  String nombreFichero="";
-  String contenidoFichero="";
-
-  cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
-  cad += "<h2>Lista de ficheros</h2>";
-
-  //Variables para manejar la lista de ficheros
-  String contenido="";
-  String fichero="";  
-  int16_t to=0;
-  
-  if(SistemaFicherosSD.listaFicheros(contenido)) 
-    {
-    Serial.printf("contenido inicial= %s\n",contenido.c_str());      
-    //busco el primer separador
-    to=contenido.indexOf(SEPARADOR); 
-
-    cad +="<style> table{border-collapse: collapse;} th, td{border: 1px solid black; padding: 10px; text-align: left;}</style>";
-    cad += "<TABLE>";
-    while(to!=-1)
-      {
-      fichero=contenido.substring(0, to);//cojo el principio como el fichero
-      contenido=contenido.substring(to+1); //la cadena ahora es desde el separador al final del fichero anterior
-      to=contenido.indexOf(SEPARADOR); //busco el siguiente separador
-
-      cad += "<TR><TD>" + fichero + "</TD>";           
-      cad += "<TD>";
-      cad += "<form action=\"manageFichero\" target=\"_blank\">";
-      cad += "    <input type=\"hidden\" name=\"nombre\" value=\"" + fichero + "\">";
-      cad += "    <input type=\"submit\" value=\"editarSD\">";
-      cad += "</form>";
-      cad += "</TD><TD>";
-      cad += "<form action=\"copiarFicheroSD\" target=\"_blank\">";
-      cad += "    <input type=\"hidden\" name=\"nombre\" value=\"" + fichero + "\">";
-      cad += "    <input type=\"submit\" value=\"copiarFD\">";
-      cad += "</form>";
-      cad += "</TD><TD>";
-      cad += "<form action=\"borraFichero\" target=\"_blank\">";
-      cad += "    <input type=\"hidden\" name=\"nombre\" value=\"" + fichero + "\">";
-      cad += "    <input type=\"submit\" value=\"borrarSD\">";
-      cad += "</form>";
-      cad += "</TD></TR>";
-      //cad += "<TR><TD><a href=\"borraFichero?nombre="+ fichero +"\" target=\"_blank\">borrar</a></TD><TD><a href=\"manageFichero?nombre="+ fichero +"\" target=\"_blank\">" + fichero + "</a></TD></TR>\n";           
-      }
-    cad += "</TABLE>\n";
-    cad += "<BR>";
-    
-    //Para crear un fichero nuevo
-    cad += "<h2>Crear un fichero nuevo:</h2>";
-    cad += "<table><tr><td>";      
-    cad += "<form action=\"creaFichero\" target=\"_blank\">";
-    cad += "  <p>";
-    cad += "    Nombre:<input type=\"text\" name=\"nombre\" value=\"\">";
-    cad += "    <BR>";
-    cad += "    Contenido:<br><textarea cols=75 rows=20 name=\"contenido\"></textarea>";
-    cad += "    <BR>";
-    cad += "    <input type=\"submit\" value=\"salvarSD\">";
-    cad += "  </p>";
-    cad += "</td></tr></table>";      
-    }
-  else cad += "<TR><TD>No se pudo recuperar la lista de ficheros</TD></TR>"; 
-
-  cad += pieHTML;
-  server.send(200, "text/html", cad); 
-  }
-
-/*********************************************/
-/*                                           */
-/*  Copia un fichero de FS a SD a traves     */
-/*  de una peticion HTTP                     */ 
-/*                                           */
-/*********************************************/  
-void handleCopiarFicheroSD(void)
-  {
-  String cad=cabeceraHTML;
-  String nombreFichero="";
-  uint8_t *contenidoFichero=NULL;
-  uint16_t tamano=0;
-
-  cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
-
-  if(!SistemaFicherosSD.SDDisponible()) cad += "La tarjeta SD no esta disponible<br>";
-  else if(server.hasArg("nombre")) //si existen esos argumentos
-    {
-    nombreFichero=server.arg("nombre");
-    tamano=SistemaFicheros.tamanoFichero(nombreFichero);
-    contenidoFichero=(uint8_t *)malloc(tamano);
-    if (contenidoFichero==NULL) return;
-    SistemaFicheros.leeFicheroBin(nombreFichero, contenidoFichero,0, tamano);
-
-    if(SistemaFicherosSD.salvaFicheroBin(nombreFichero, nombreFichero+".bak", contenidoFichero,tamano)) cad += "Fichero copiado con exito<br>";
-    else cad += "No se pudo copiar el fichero<br>"; 
-    }
-  else cad += "Falta el argumento <nombre de fichero>"; 
-
-  cad += pieHTML;
-  server.send(200, "text/html", cad); 
-  }
-
-/*********************************************/
-/*                                           */
-/*  Copia un fichero de SD a FS a traves     */
-/*  de una peticion HTTP                     */ 
-/*                                           */
-/*********************************************/  
-void handleCopiarFicheroFS(void)
-  {
-  String cad=cabeceraHTML;
-  String nombreFichero="";
-  uint8_t *contenidoFichero=NULL;
-  uint16_t tamano=0;
-
-  cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
-
-  if(!SistemaFicherosSD.SDDisponible()) cad += "La tarjeta SD no esta disponible<br>";
-  else if(server.hasArg("nombre")) //si existen esos argumentos
-    {
-    nombreFichero=server.arg("nombre");
-    tamano=SistemaFicherosSD.tamanoFichero(nombreFichero);
-    contenidoFichero=(uint8_t *)malloc(tamano);
-    if (contenidoFichero==NULL) return;
-    SistemaFicherosSD.leeFicheroBin(nombreFichero, contenidoFichero,0, tamano);
-
-    if(SistemaFicheros.salvaFicheroBin(nombreFichero, nombreFichero+".bak", contenidoFichero,tamano)) cad += "Fichero copiado con exito<br>";
-    else cad += "No se pudo copiar el fichero<br>"; 
-    }
-  else cad += "Falta el argumento <nombre de fichero>"; 
-
-  cad += pieHTML;
-  server.send(200, "text/html", cad); 
-  }
-
-/*********************************************/
-/*                                           */
 /*  Crea un fichero a traves de una          */
 /*  peticion HTTP                            */ 
 /*                                           */
@@ -411,7 +302,7 @@ void handleCreaFichero(void)
   String nombreFichero="";
   String contenidoFichero="";
 
-  cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
+  //cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
 
   if(server.hasArg("nombre") && server.hasArg("contenido")) //si existen esos argumentos
     {
@@ -439,7 +330,7 @@ void handleBorraFichero(void)
   String nombreFichero="";
   String contenidoFichero="";
 
-  cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
+  //cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
   
   if(server.hasArg("nombre") ) //si existen esos argumentos
     {
@@ -466,7 +357,7 @@ void handleLeeFichero(void)
   String nombreFichero="";
   String contenido="";
   
-  cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
+  //cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
   
   if(server.hasArg("nombre") ) //si existen esos argumentos
     {
@@ -503,7 +394,7 @@ void handleManageFichero(void)
   String nombreFichero="";
   String contenido="";
   
-  cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
+  //cad += "<h1>" + cacharro.getNombreDispositivo() + "</h1>";
   
   if(server.hasArg("nombre") ) //si existen esos argumentos
     {
@@ -522,7 +413,7 @@ void handleManageFichero(void)
       cad += "<BR>";
 
       cad += "<table><tr><td>";
-      cad += "<form action=\"borraFichero\" target=\"_blank\">";
+      cad += "<form action=\"borraFichero\" target=\"_self\">";
       cad += "  <p>";
       cad += "    <input type=\"hidden\" name=\"nombre\" value=\"" + nombreFichero + "\">";
       cad += "    <input type=\"submit\" value=\"borrar\">";
@@ -531,7 +422,7 @@ void handleManageFichero(void)
       cad += "</td></tr></table>";
       
       cad += "<table>Modificar fichero<tr><td>";      
-      cad += "<form action=\"creaFichero\" target=\"_blank\">";
+      cad += "<form action=\"creaFichero\" target=\"_self\">";
       cad += "  <p>";
       cad += "    <input type=\"hidden\" name=\"nombre\" value=\"" + nombreFichero + "\">";
       cad += "    contenido del fichero: <br><textarea cols=75 rows=20 name=\"contenido\">" + contenido + "</textarea>";
@@ -580,6 +471,8 @@ void handleNotFound()
 /*********************************** Inicializacion y configuracion *****************************************************************/
 void inicializaWebServer(void)
   {
+  cabeceraHTML="<HTML><HEAD><TITLE>" + cacharro.getNombreDispositivo() + " </TITLE></HEAD><BODY><h1><a href=\"../\" target=\"_self\">" + cacharro.getNombreDispositivo() + "</a><br></h1>";
+  
   /*******Configuracion del Servicio Web***********/  
   //Inicializo los serivcios  
   //decalra las URIs a las que va a responder
@@ -590,17 +483,15 @@ void inicializaWebServer(void)
 
   server.on("/restart", handleRestart);  //URI de test
   server.on("/info", handleInfo);  //URI de test
-  
+
+  server.on("/particiones", handleParticiones);  //URI de test
+  server.on("/setNextBoot",handleSetNextBoot);
+
   server.on("/listaFicheros", handleListaFicheros);  //URI de leer fichero
   server.on("/creaFichero", handleCreaFichero);  //URI de crear fichero
   server.on("/borraFichero", handleBorraFichero);  //URI de borrar fichero
   server.on("/leeFichero", handleLeeFichero);  //URI de leer fichero
-  server.on("/copiarFicheroSD", handleCopiarFicheroSD);  //URI de crear fichero
-  server.on("/copiarFicheroFS", handleCopiarFicheroFS);  //URI de crear fichero
   server.on("/manageFichero", handleManageFichero);  //URI de leer fichero
-
-  //En la SD
-  server.on("/listaFicherosSD", handleListaFicherosSD);  //URI de leer fichero de la tarjeta SD
 
   server.onNotFound(handleNotFound);//pagina no encontrada
 

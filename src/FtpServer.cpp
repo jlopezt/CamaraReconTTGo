@@ -102,7 +102,6 @@ boolean FtpServer::parseaConfiguracionFTP(String contenido)
 //******************************Parte especifica del json a leer********************************
   //const char *user=(const char *)json["Usuario"];
   if (json.containsKey("Usuario")) usuario=String((const char *)json["Usuario"]);
-  
   if (json.containsKey("Password")) password=String((const char *)json["Password"]);
 
   Serial.printf("FTP:\nUsuario: %s\nPassword: %s\n",usuario.c_str(),password.c_str()); 

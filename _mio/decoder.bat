@@ -1,0 +1,14 @@
+
+C:\Users\jlopezt\.platformio\packages\toolchain-xtensa32\bin\xtensa-esp32-elf-addr2line -pfiaC -e C:\Users\jlopezt\Documents\PlatformIO\Projects\Camara\.pio\build\esp32dev\firmware.elf 0x400911fc:0x3ffb1e10>>salida.txt
+C:\Users\jlopezt\.platformio\packages\toolchain-xtensa32\bin\xtensa-esp32-elf-addr2line -pfiaC -e C:\Users\jlopezt\Documents\PlatformIO\Projects\Camara\.pio\build\esp32dev\firmware.elf 0x4009142d:0x3ffb1e30>>salida.txt
+C:\Users\jlopezt\.platformio\packages\toolchain-xtensa32\bin\xtensa-esp32-elf-addr2line -pfiaC -e C:\Users\jlopezt\Documents\PlatformIO\Projects\Camara\.pio\build\esp32dev\firmware.elf 0x400fcc31:0x3ffb1e50>>salida.txt
+C:\Users\jlopezt\.platformio\packages\toolchain-xtensa32\bin\xtensa-esp32-elf-addr2line -pfiaC -e C:\Users\jlopezt\Documents\PlatformIO\Projects\Camara\.pio\build\esp32dev\firmware.elf 0x400835b3:0x3ffb1e70>>salida.txt
+C:\Users\jlopezt\.platformio\packages\toolchain-xtensa32\bin\xtensa-esp32-elf-addr2line -pfiaC -e C:\Users\jlopezt\Documents\PlatformIO\Projects\Camara\.pio\build\esp32dev\firmware.elf 0x400edda5:0x3ffb1e90>>salida.txt
+C:\Users\jlopezt\.platformio\packages\toolchain-xtensa32\bin\xtensa-esp32-elf-addr2line -pfiaC -e C:\Users\jlopezt\Documents\PlatformIO\Projects\Camara\.pio\build\esp32dev\firmware.elf 0x40158094:0x3ffb1eb0>>salida.txt
+C:\Users\jlopezt\.platformio\packages\toolchain-xtensa32\bin\xtensa-esp32-elf-addr2line -pfiaC -e C:\Users\jlopezt\Documents\PlatformIO\Projects\Camara\.pio\build\esp32dev\firmware.elf 0x401582a3:0x3ffb1ed0>>salida.txt
+C:\Users\jlopezt\.platformio\packages\toolchain-xtensa32\bin\xtensa-esp32-elf-addr2line -pfiaC -e C:\Users\jlopezt\Documents\PlatformIO\Projects\Camara\.pio\build\esp32dev\firmware.elf 0x400e4e59:0x3ffb1ef0>>salida.txt
+C:\Users\jlopezt\.platformio\packages\toolchain-xtensa32\bin\xtensa-esp32-elf-addr2line -pfiaC -e C:\Users\jlopezt\Documents\PlatformIO\Projects\Camara\.pio\build\esp32dev\firmware.elf 0x400e4f86:0x3ffb1f50>>salida.txt
+C:\Users\jlopezt\.platformio\packages\toolchain-xtensa32\bin\xtensa-esp32-elf-addr2line -pfiaC -e C:\Users\jlopezt\Documents\PlatformIO\Projects\Camara\.pio\build\esp32dev\firmware.elf 0x400d6dae:0x3ffb1f70>>salida.txt
+C:\Users\jlopezt\.platformio\packages\toolchain-xtensa32\bin\xtensa-esp32-elf-addr2line -pfiaC -e C:\Users\jlopezt\Documents\PlatformIO\Projects\Camara\.pio\build\esp32dev\firmware.elf 0x400e12d6:0x3ffb1f90>>salida.txt
+C:\Users\jlopezt\.platformio\packages\toolchain-xtensa32\bin\xtensa-esp32-elf-addr2line -pfiaC -e C:\Users\jlopezt\Documents\PlatformIO\Projects\Camara\.pio\build\esp32dev\firmware.elf 0x400f0a71:0x3ffb1fb0>>salida.txt
+C:\Users\jlopezt\.platformio\packages\toolchain-xtensa32\bin\xtensa-esp32-elf-addr2line -pfiaC -e C:\Users\jlopezt\Documents\PlatformIO\Projects\Camara\.pio\build\esp32dev\firmware.elf 0x4008d1a1:0x3ffb1fd0>>salida.txt

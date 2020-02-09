@@ -50,7 +50,6 @@
 extern camera_fb_t *fb;
 
 static void send_face_list(void);
-boolean enviarWSTXT(String mensaje);
 
 typedef struct
   {
@@ -60,14 +59,16 @@ typedef struct
   } http_img_process_result;
 
 camera_fb_t *fb = NULL; //Global para todos los modulos que usen la camara. Aqui se llena, el resto solo lee
+
 //websockets
-WebSocketsServer webSocket = WebSocketsServer(PUERTO_WEBSOCKET);
+boolean enviarWSTXT(String mensaje);
 typedef struct
   {
   int8_t id=NOT_CONNECTED;//No hay cliuente conectado
   IPAddress IP={0,0,0,0};
   }cliente_t;
 cliente_t cliente;
+WebSocketsServer webSocket = WebSocketsServer(PUERTO_WEBSOCKET);
 
 /**********************************************************/
 /*                                                        */
@@ -99,7 +100,6 @@ static dl_matrix3du_t *aligned_face = NULL;
 
 httpd_handle_t stream_httpd = NULL;
 
-uint16_t ultimoReconocimiento;
 typedef union
   {
   fptp_t *float_p;
@@ -131,6 +131,8 @@ typedef struct
 } httpd_resp_value;
 
 httpd_resp_value st_name;
+
+unsigned long intervaloReconocimiento=0;
 /********************************************************************************************************/
 //Prototipos de funciones
 boolean recuperaDatosCaras(boolean debug);
@@ -145,7 +147,7 @@ void faceRecon_init(boolean debug)
   {
   Serial.printf("*************Init reconocimiento facial*****************\n");    
   g_state=DISCONNECT;
-  ultimoReconocimiento=millis();
+  intervaloReconocimiento=INTERVALO_RECONOCIMIENTOS;
 
   if(!recuperaDatosCaras(debugGlobal)) 
     {
@@ -156,7 +158,7 @@ void faceRecon_init(boolean debug)
     read_face_id_from_flash_with_name(&st_face_list);
     }
 
-  Serial.printf("Leidas %i caras\n", st_face_list.count);  
+  Serial.printf("Intervalo: %lu\nconfirm_times: %i\nLeidas %i caras\n",intervaloReconocimiento,st_face_list.confirm_times, st_face_list.count);  
   face_id_node *head = st_face_list.head;
   for (int i = 0; i < st_face_list.count; i++) // loop current faces
     {
@@ -207,12 +209,13 @@ boolean parseaConfiguracionCaras(String contenido)
 //******************************Parte especifica del json a leer********************************
   uint8_t confirm_times=ENROLL_CONFIRM_TIMES;
   if (json.containsKey("confirm_times")) confirm_times=json["confirm_times"]; 
-  uint8_t count=0;
-  if (json.containsKey("count")) count=json["count"]; 
+  if (json.containsKey("intervaloReconocimiento")) intervaloReconocimiento=json["intervaloReconocimiento"]; 
+  
+  JsonArray& caras = json["face_id_nodes"];
 
   //Inicializo la lista de caras con el contador y el numero de confirmaciones
+  uint8_t count=caras.size();
   face_id_name_init(&st_face_list, count, confirm_times);
-  JsonArray& caras = json["face_id_nodes"];
 
   for(uint8_t i=0;i<count;i++)
     {
@@ -247,7 +250,7 @@ boolean parseaConfiguracionCaras(String contenido)
     st_face_list.count++;        
     }
 
-  Serial.printf("Caras:\n"); 
+  Serial.printf("Caras:\nnum. caras: %i\nconfirm_times: %i\n",st_face_list.count,st_face_list.confirm_times); 
   face_id_node *cara=st_face_list.head;
   for(int8_t i=0;i<st_face_list.count;i++) 
     {
@@ -320,7 +323,8 @@ boolean salvar_lista_face_id_a_fichero(face_id_name_list *lista, String ficheroC
 
   //Creo el JsonObject 
   JsonObject& root = jb.createObject();
-  root.set("count",lista->count);
+  //root.set("count",lista->count);
+  root.set("intervaloReconocimiento",intervaloReconocimiento);
   root.set("confirm_times",lista->confirm_times);
 
   face_id_node *cara = lista->head;
@@ -364,9 +368,10 @@ int caraReconocida(String nombre)
   {
   String topic;
   String payload;
-  uint16_t ahora=millis();
+  unsigned long ahora=millis();
+  static unsigned long ultimoReconocimiento=0;
 
-  if(ahora-ultimoReconocimiento>INTERVALO_RECONOCIMIENTOS) 
+  if(ahora-ultimoReconocimiento>intervaloReconocimiento) 
     {
     ultimoReconocimiento=ahora;
 
@@ -381,6 +386,8 @@ int caraReconocida(String nombre)
     if (miMQTT.enviarMQTT(topic,payload)) return OK;   
     return KO;
     } 
+  
+  //Serial.printf("Dentro de intervalo de guarda\n Llevamos %0.2f s",((float)ahora-(float)ultimoReconocimiento)/1000);
   return OK;
   }
 

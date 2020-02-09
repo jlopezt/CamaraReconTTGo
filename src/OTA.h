@@ -37,5 +37,11 @@ void finOTA(void);
 void progresoOTA(unsigned int progress, unsigned int total);
 void erroresOTA(ota_error_t error);
 void inicializaOTA(boolean debug);
-    
+
+String pintaParticionHTML(void);
+String getParticionProximoUpdate(void);
+String getParticionEjecucion(void);
+String getParticionProximoArranque(void);
+boolean setParticionProximoArranque(String nombre);
+
 #endif
