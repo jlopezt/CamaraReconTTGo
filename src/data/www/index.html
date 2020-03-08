@@ -109,6 +109,73 @@ body {
  h3 {
      margin-bottom: 3px;
 }
+
+
+.input-group {
+    display: flex;
+    flex-wrap: nowrap;
+    line-height: 22px;
+    margin: 5px 0
+}
+
+.input-group>label {
+    display: inline-block;
+    padding-right: 10px;
+    min-width: 47%
+}
+
+.input-group input,.input-group select {
+    flex-grow: 1
+}
+
+.switch {
+    display: block;
+    position: relative;
+    line-height: 22px;
+    font-size: 16px;
+    height: 22px
+}
+
+.switch input {
+    outline: 0;
+    opacity: 0;
+    width: 0;
+    height: 0
+}
+
+.slider {
+    width: 50px;
+    height: 22px;
+    border-radius: 22px;
+    cursor: pointer;
+    background-color: grey
+}
+
+.slider,.slider:before {
+    display: inline-block;
+    transition: .4s
+}
+
+.slider:before {
+    position: relative;
+    content: "";
+    border-radius: 50%;
+    height: 16px;
+    width: 16px;
+    left: 4px;
+    top: 3px;
+    background-color: #fff
+}
+
+input:checked+.slider {
+    background-color: #ff3034
+}
+
+input:checked+.slider:before {
+    -webkit-transform: translateX(26px);
+    transform: translateX(26px)
+}
+
 </style>
 </head>
 <body>
@@ -138,7 +205,18 @@ body {
     <button id="button-foto" class="right">Foto</button>    
   </div>
   <div class="status-display"> <span id="depurador"></span> </div>
+  
+  <div class="input-group" id="check-recon-group">
+    <label for="check-recon">Activar reconocimiento</label>
+    <div class="switch">
+        <input id="check-recon" type="checkbox" class="default-action" checked="checked">
+        <label class="slider" for="check-recon"></label>
+    </div>
+  </div>
+
 </div>
+
+
 <script>
   document.addEventListener("DOMContentLoaded", function(event) {
   var baseHost = document.location.origin;
@@ -146,14 +224,15 @@ body {
   const WS_URL = "ws://" + window.location.host + ":88";
   const ws = new WebSocket(WS_URL);
 
-  const view = document.getElementById("stream");
-  const viewfoto = document.getElementById("foto");
-  const personFormField = document.getElementById("person");
-  const streamButton = document.getElementById("button-stream");
-  const captureButton = document.getElementById("button-capture");
-  const deleteAllButton = document.getElementById("delete_all");
-  const serializeButton=document.getElementById("button-serialize");
-  const fotoButton=document.getElementById("button-foto");
+  const view = document.getElementById("stream"); //la imagen
+  const viewfoto = document.getElementById("foto"); //Imagen para foto
+  const personFormField = document.getElementById("person"); //Cuadro de texto para escribir el nombre
+  const streamButton = document.getElementById("button-stream"); //Boton Visualizar
+  const captureButton = document.getElementById("button-capture"); //Boton capturar
+  const deleteAllButton = document.getElementById("delete_all"); //Boton borrar todas
+  const serializeButton=document.getElementById("button-serialize"); //Boton Serializar
+  const fotoButton=document.getElementById("button-foto"); //Boton foto
+  const reconocerCheck=document.getElementById("check-recon"); //check para activar/desactivar el reconocimiento
 
   var flagFoto=false;
 
@@ -191,6 +270,19 @@ body {
         }
     }
   };
+
+  reconocerCheck.onchange = () => {
+    if(reconocerCheck.checked) 
+      {
+      ws.send("reconoce");
+      console.log('Reconocimiento on');   
+      }
+    else
+      {
+      ws.send("no_reconoce");
+      console.log('Reconocimiento off');   
+      }
+  }
 
   streamButton.onclick = () => {
     ws.send("stream");

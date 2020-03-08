@@ -133,6 +133,7 @@ typedef struct
 httpd_resp_value st_name;
 
 unsigned long intervaloReconocimiento=0;
+boolean reconocerCaras=true;
 /********************************************************************************************************/
 //Prototipos de funciones
 boolean recuperaDatosCaras(boolean debug);
@@ -361,6 +362,17 @@ boolean salvar_lista_face_id_a_fichero(face_id_name_list *lista, String ficheroC
 
 /******************************************************/
 /*                                                    */
+/* Activa o desactiva el reconocimiento facial        */ 
+/*                                                    */
+/******************************************************/
+void activaRecon(boolean activar)
+  {
+  Serial.printf("El reconocimiento facial esta %s\n",(activar?"on":"off"));  
+  reconocerCaras=activar;
+  }
+
+/******************************************************/
+/*                                                    */
 /* Envia el mensaje de cara reconocida mediante MQTT  */ 
 /* boolean enviarMQTT(String topic, String payload);  */
 /******************************************************/
@@ -415,72 +427,75 @@ void reconocimientoFacial(boolean debug)
     }
 
   fb = esp_camera_fb_get();
-
-  out_res.net_boxes = NULL;
-  out_res.face_id = NULL;
-
-  if(debug) Serial.printf("Convierte la imagen\n");
-  fmt2rgb888(fb->buf, fb->len, fb->format, out_res.image);
-
-  if(debug) Serial.printf("Evalua si hay una cara\n");
-  out_res.net_boxes = face_detect(image_matrix, &mtmn_config);
-
-  if (out_res.net_boxes)
+/**************************INICIO RECONOCER CARA*********************/
+  if(reconocerCaras)
     {
-    if (align_face(out_res.net_boxes, image_matrix, aligned_face) == ESP_OK)
+    out_res.net_boxes = NULL;
+    out_res.face_id = NULL;
+
+    if(debug) Serial.printf("Convierte la imagen\n");
+    fmt2rgb888(fb->buf, fb->len, fb->format, out_res.image);
+
+    if(debug) Serial.printf("Evalua si hay una cara\n");
+    out_res.net_boxes = face_detect(image_matrix, &mtmn_config);
+
+    if (out_res.net_boxes)
       {
-      //Se ha detectado una cara
-      if(debug) Serial.printf("Hay una cara\n");
-      out_res.face_id = get_face_id(aligned_face);////////DA CORE
-
-      if (g_state == START_ENROLL)
+      if (align_face(out_res.net_boxes, image_matrix, aligned_face) == ESP_OK)
         {
-        int left_sample_face = enroll_face_id_to_flash_with_name(&st_face_list, out_res.face_id, st_name.enroll_name);
-        char enrolling_message[64];
-        sprintf(enrolling_message, "SAMPLE NUMBER %d FOR %s", ENROLL_CONFIRM_TIMES - left_sample_face, st_name.enroll_name);
-        enviarWSTXT(enrolling_message);
+        //Se ha detectado una cara
+        if(debug) Serial.printf("Hay una cara\n");
+        out_res.face_id = get_face_id(aligned_face);////////DA CORE
 
-        if (left_sample_face == 0)
+        if (g_state == START_ENROLL)
           {
-          ESP_LOGI(TAG, "Enrolled Face ID: %s", st_face_list.tail->id_name);
-          g_state = START_STREAM;
-          char captured_message[64];
-          sprintf(captured_message, "FACE CAPTURED FOR %s", st_face_list.tail->id_name);
-          enviarWSTXT(captured_message);
-          send_face_list();
-          }
-        }
-      else
-        {     
-        if (st_face_list.count > 0)
-          {
-          face_id_node *f = recognize_face_with_name(&st_face_list, out_res.face_id);
-          if (f)
+          int left_sample_face = enroll_face_id_to_flash_with_name(&st_face_list, out_res.face_id, st_name.enroll_name);
+          char enrolling_message[64];
+          sprintf(enrolling_message, "SAMPLE NUMBER %d FOR %s", ENROLL_CONFIRM_TIMES - left_sample_face, st_name.enroll_name);
+          enviarWSTXT(enrolling_message);
+
+          if (left_sample_face == 0)
             {
-            //cara reconocida
-            String cad="Reconocido: "+ String(f->id_name);  
-            if(debug || true) Serial.printf("%s\n", cad.c_str());
-            enviarWSTXT(cad);
-            caraReconocida(f->id_name);
-            }
-          else
-            {
-            //cara no reconocida 
-            if(debug) Serial.printf("Cara no reconocida\n"); 
-            enviarWSTXT("Cara no reconocida");
+            ESP_LOGI(TAG, "Enrolled Face ID: %s", st_face_list.tail->id_name);
+            g_state = START_STREAM;
+            char captured_message[64];
+            sprintf(captured_message, "FACE CAPTURED FOR %s", st_face_list.tail->id_name);
+            enviarWSTXT(captured_message);
+            send_face_list();
             }
           }
-        }
+        else
+          {     
+          if (st_face_list.count > 0)
+            {
+            face_id_node *f = recognize_face_with_name(&st_face_list, out_res.face_id);
+            if (f)
+              {
+              //cara reconocida
+              String cad="Reconocido: "+ String(f->id_name);  
+              if(debug || true) Serial.printf("%s\n", cad.c_str());
+              enviarWSTXT(cad);
+              caraReconocida(f->id_name);
+              }
+            else
+              {
+              //cara no reconocida 
+              if(debug) Serial.printf("Cara no reconocida\n"); 
+              enviarWSTXT("Cara no reconocida");
+              }
+            }
+          }
 
-      dl_matrix3d_free(out_res.face_id);
+        dl_matrix3d_free(out_res.face_id);
+        }
+      }
+    else
+      {
+      enviarWSTXT("No se detecta cara");
+      //No se ha detectado cara  
       }
     }
-  else
-    {
-    enviarWSTXT("No se detecta cara");
-    //No se ha detectado cara  
-    }
-  
+  /**************************FIN RECONOCER CARA*********************/
   //Si esta en modo streamming
   if (g_state == START_STREAM && cliente.id!=NOT_CONNECTED) 
     {
@@ -540,7 +555,7 @@ void delete_all_faces(void)
 /**********************************************/
 void gestionaMensajes(uint8_t cliente, String mensaje) //Tiene que implementar la maquina equivalente a la del loop de ESP-WHO. En funcion de g_state
   {
-  Serial.printf("Procesando mensaje %s de %i\n",mensaje.c_str(),cliente);
+  Serial.printf("Procesando mensaje %s, cliente: %i\n",mensaje.c_str(),cliente);
 	if(mensaje== "stream") 
 		{
     g_state = START_STREAM;
@@ -548,7 +563,7 @@ void gestionaMensajes(uint8_t cliente, String mensaje) //Tiene que implementar l
     Serial.println("Enviado STREAMING");
  	  }
 
-	if(mensaje== "detect") 
+	if(mensaje== "detect") //NO LO ENVIA NADIE!!!!
 		{
     g_state = START_DETECT;
     webSocket.sendTXT(cliente, "DETECTING");
@@ -565,7 +580,7 @@ void gestionaMensajes(uint8_t cliente, String mensaje) //Tiene que implementar l
     Serial.println("Enviado CAPTURING");
  	  }
 
-	if(mensaje== "recognise") 
+	if(mensaje== "recognise") //NO LO ENVIA NADIE
 		{
     g_state = START_RECOGNITION;
     webSocket.sendTXT(cliente, "RECOGNISING");
@@ -603,8 +618,20 @@ void gestionaMensajes(uint8_t cliente, String mensaje) //Tiene que implementar l
     Serial.println("Guardando  foto en la SD...");
     webSocket.sendTXT(cliente, "foto");
     webSocket.sendBIN(cliente,fb->buf, fb->len);//uint8_t num, const uint8_t * payload, size_t length);
-    //SistemaFicherosSD.salvaFicheroBin("/SD/foto.jpg","/foto.jpg.bak",fb->buf, fb->len); // payload (image), payload length
-    //webSocket.sendTXT(cliente, "depurador: foto guardada en la SD");
+    }
+
+  if (mensaje == "reconoce")  
+    {
+    Serial.println("Activa reconocimiento");
+    //reconocerCaras=true;
+    activaRecon(true);
+    }
+
+  if (mensaje == "no_reconoce")  
+    {
+    Serial.println("Activa reconocimiento");
+    //reconocerCaras=false;
+    activaRecon(false);
     }
   }
 

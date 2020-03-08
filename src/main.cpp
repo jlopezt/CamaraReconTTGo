@@ -56,7 +56,7 @@ void setup()
   //Ficheros - Lo primero para poder leer los demas ficheros de configuracion
   if(!SistemaFicheros.inicializaFicheros(debugGlobal))Serial.println("Error al inicializar el sistema de ficheros");
 
-  //Compruebo si existe candado, si existe la ultima configuracion fue mal
+  /*//Compruebo si existe candado, si existe la ultima configuracion fue mal
   if(SistemaFicheros.existeFichero(FICHERO_CANDADO)) 
     {
     Serial.printf("Candado puesto. Configuracion por defecto");
@@ -70,7 +70,7 @@ void setup()
     if(SistemaFicheros.salvaFichero(FICHERO_CANDADO,"","JSD")) Serial.println("Candado creado");
     else Serial.println("ERROR - No se pudo crear el candado");
     }
- 
+ */
   //Configuracion general
   Serial.printf("\n\nInit General ---------------------------------------------------------------------\n");
   cacharro.inicializaConfiguracion(debugGlobal);

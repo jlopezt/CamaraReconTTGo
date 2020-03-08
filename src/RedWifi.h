@@ -17,6 +17,14 @@
 #include <WiFiMulti.h>
 /***************************** Includes *****************************/
 
+typedef enum{
+  MODO_WIFI_DESCOMECTADO, //sin conexion, modo incial
+  MODO_WIFI_MONOBASE,     //Conectado a una base definida
+  MODO_WIFI_MULTIBASE,    //Conectado a una de las bases de la lista
+  MODO_WIFI_AUTODETECT,   //Conectado por el portal de lconfiguracion
+  MODO_WIFI_MAX           //Final de la lista, no es un valor valido
+}modoWifi_t;
+
 void miSaveConfigCallback(void);
 
 class RedWifiClass
@@ -35,6 +43,10 @@ class RedWifiClass
 
   boolean conectado; //Si el portal de configuracion devolvio OK a la conexion
 
+  modoWifi_t modoWifi=MODO_WIFI_DESCOMECTADO;
+
+  void setModoWifi(modoWifi_t modo);
+
   public:
   RedWifiClass();
   
@@ -44,11 +56,14 @@ class RedWifiClass
   boolean conectaAutodetect(boolean debug);
   boolean conectaMonobase(boolean debug);
   boolean conectaMultibase(boolean debug);
+  boolean reconectar(boolean debug);
 
   String getIP(int debug);
   String nombreSSID(void);  
   void WifiWD(void);
   
+  modoWifi_t getModoWifi(void);
+
   String generaJsonConfiguracionWifi(String configActual, String ssid, String password);
   };
 
