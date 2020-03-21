@@ -16,8 +16,9 @@
 #define FRECUENCIA_ENTRADAS               5 //cada cuantas vueltas de loop atiende las entradas
 #define FRECUENCIA_SALIDAS                5 //cada cuantas vueltas de loop atiende las salidas
 #define FRECUENCIA_SECUENCIADOR          10 //cada cuantas vueltas de loop atiende al secuenciador
-#define FRECUENCIA_SERVIDOR_WEB           1 //cada cuantas vueltas de loop atiende el servidor web
-#define FRECUENCIA_SERVIDOR_FTP           1 //cada cuantas vueltas de loop atiende el servidor ftp
+#define FRECUENCIA_SERVIDOR_WEB           5 //cada cuantas vueltas de loop atiende el servidor web
+#define FRECUENCIA_SERVIDOR_WEBSOCKET     1 //cada cuantas vueltas de loop atiende el servidor web
+#define FRECUENCIA_SERVIDOR_FTP           5 //cada cuantas vueltas de loop atiende el servidor ftp
 #define FRECUENCIA_MQTT                  10 //cada cuantas vueltas de loop envia y lee del broker MQTT
 #define FRECUENCIA_ENVIO_DATOS           50 //cada cuantas vueltas de loop envia al broker el estado de E/S
 #define FRECUENCIA_ORDENES                2 //cada cuantas vueltas de loop atiende las ordenes via serie 
@@ -31,25 +32,30 @@
 #include <camara.h>
 //#include <streaming.h>
 #include <faceRecon.h>
+#include "soc/soc.h"           // Disable brownout problems
+#include "soc/rtc_cntl_reg.h"  // Disable brownout problems
 /***************************** Includes *****************************/
 
 /***************************** variables globales *****************************/
 uint16_t vuelta = MAX_VUELTAS-100;//0; //vueltas de loop
 int debugGlobal=0; //por defecto desabilitado
+boolean trazaMemoria=false;
 boolean candado=false; //Candado de configuracion. true implica que la ultima configuracion fue mal
 /***************************** variables globales *****************************/
       
 void setup()
   {
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector  
+
   Serial.begin(115200);
-      pinMode(4,OUTPUT);
+    
   Serial.printf("\n\n\n");
   Serial.printf("*************** %s ***************\n",NOMBRE_FAMILIA);
   Serial.printf("*************** %s ***************\n",VERSION);
   Serial.println("***************************************************************");
   Serial.println("*                                                             *");
   Serial.println("*             Inicio del setup del modulo                     *");
-  Serial.println("*                                                             *");    
+  Serial.println("*                                                             *");
   Serial.println("***************************************************************");
 
   Serial.printf("\n\nInit Ficheros ---------------------------------------------------------------------\n");
@@ -157,7 +163,7 @@ void loop()
   //Prioridad 3: Interfaces externos de consulta    
   if ((vuelta % FRECUENCIA_SERVIDOR_WEB)==0) webServer(debugGlobal); //atiende el servidor web
   if ((vuelta % FRECUENCIA_SERVIDOR_FTP)==0) ftpSrv.handleFTP(); //atiende el servidor ftp
-  if ((vuelta % FRECUENCIA_SERVIDOR_WEB)==0) atiendeWebsocket();
+  if ((vuelta % FRECUENCIA_SERVIDOR_WEBSOCKET)==0) atiendeWebsocket();
   if ((vuelta % FRECUENCIA_MQTT)==0) miMQTT.atiendeMQTT(debugGlobal);      
   if ((vuelta % FRECUENCIA_ENVIO_DATOS)==0) miMQTT.enviaDatos(debugGlobal); //publica via MQTT los datos de entradas y salidas, segun configuracion
   if ((vuelta % FRECUENCIA_ORDENES)==0) Ordenes.gestionaOrdenes(debugGlobal); //Lee ordenes via serie
@@ -165,7 +171,10 @@ void loop()
 
   //sumo una vuelta de loop, si desborda inicializo vueltas a cero
   vuelta++;//sumo una vuelta de loop  
-      
+
+  //pinto la memoria libre    
+  if(trazaMemoria)  Serial.printf("Vuelta: %i| freeMem: actual %i | minima: %i\n",vuelta,esp_get_free_heap_size(),esp_get_minimum_free_heap_size());
+
   //Espero hasta el final de la rodaja de tiempo
   while(millis()<EntradaBucle+ANCHO_INTERVALO)
     {
@@ -173,4 +182,3 @@ void loop()
     delayMicroseconds(1000);
     }
   }
-

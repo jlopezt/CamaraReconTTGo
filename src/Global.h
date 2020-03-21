@@ -7,8 +7,8 @@
 #define _GLOBAL_
 
 //Defines generales
-#define NOMBRE_FAMILIA   "Camara servomotorizada"
-#define VERSION          "1.2.0 (ESP32 1.0.4|Migracion C++|OTA|MQTT|FicherosWeb|FTP)"
+#define NOMBRE_FAMILIA   "Camara reconocimiento facial"
+#define VERSION          "1.3.0 (ESP32 1.0.4|Migracion C++|OTA|MQTT|FicherosWeb|FTP)"
 #define SEPARADOR        '|'
 #define SUBSEPARADOR     '#'
 #define KO               -1
@@ -68,5 +68,6 @@
 /***************************** Includes *****************************/
         
 extern int debugGlobal;
+extern boolean trazaMemoria;
 
 #endif

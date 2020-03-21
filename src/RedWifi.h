@@ -18,7 +18,7 @@
 /***************************** Includes *****************************/
 
 typedef enum{
-  MODO_WIFI_DESCOMECTADO, //sin conexion, modo incial
+  MODO_WIFI_DESCONECTADO, //sin conexion, modo incial
   MODO_WIFI_MONOBASE,     //Conectado a una base definida
   MODO_WIFI_MULTIBASE,    //Conectado a una de las bases de la lista
   MODO_WIFI_AUTODETECT,   //Conectado por el portal de lconfiguracion
@@ -43,7 +43,7 @@ class RedWifiClass
 
   boolean conectado; //Si el portal de configuracion devolvio OK a la conexion
 
-  modoWifi_t modoWifi=MODO_WIFI_DESCOMECTADO;
+  modoWifi_t modoWifi=MODO_WIFI_DESCONECTADO;
 
   void setModoWifi(modoWifi_t modo);
 

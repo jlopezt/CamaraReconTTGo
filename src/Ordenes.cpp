@@ -54,7 +54,7 @@ void func_comando_MQTTConfig(int iParametro, char* sParametro, float fParametro)
 void func_comando_borraCaras(int iParametro, char* sParametro, float fParametro);
 void func_comando_flash(int iParametro, char* sParametro, float fParametro); 
 void func_comando_ledRojo(int iParametro, char* sParametro, float fParametro); 
-
+void func_comando_trazaMen(int iParametro, char* sParametro, float fParametro); 
 
 OrdenesClass::OrdenesClass(void) {}
 
@@ -259,6 +259,10 @@ void OrdenesClass::inicializaOrden(void)
   comandos[i].comando="borraCaras";
   comandos[i].descripcion="Borra caras aprendidas de la memoria flash";
   comandos[i++].p_func_comando=func_comando_borraCaras;
+
+  comandos[i].comando="freeMem";
+  comandos[i].descripcion="Pinta la traza de la memoria libre";
+  comandos[i++].p_func_comando=func_comando_trazaMen;
 
   //resto
   for(;i<MAX_COMANDOS;)
@@ -479,4 +483,10 @@ void func_comando_borraCaras(int iParametro, char* sParametro, float fParametro)
   Serial.println("Caras borradas.");
   }
 
+void func_comando_trazaMen(int iParametro, char* sParametro, float fParametro)//"debug")
+  {
+  trazaMemoria=!trazaMemoria;
+  if (trazaMemoria) Serial.println("trazaMemoria esta on");
+  else Serial.println("trazaMemoria esta off");
+  }
 /***************************** FIN funciones para comandos ******************************************/ 

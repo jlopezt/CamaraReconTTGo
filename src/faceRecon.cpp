@@ -12,6 +12,15 @@
 #define FACE_ID_SAVE_NUMBER 7
 #define INTERVALO_RECONOCIMIENTOS 10000
 
+#define FACE_COLOR_WHITE  0x00FFFFFF
+#define FACE_COLOR_BLACK  0x00000000
+#define FACE_COLOR_RED    0x000000FF
+#define FACE_COLOR_GREEN  0x0000FF00
+#define FACE_COLOR_BLUE   0x00FF0000
+#define FACE_COLOR_YELLOW (FACE_COLOR_RED | FACE_COLOR_GREEN)
+#define FACE_COLOR_CYAN   (FACE_COLOR_BLUE | FACE_COLOR_GREEN)
+#define FACE_COLOR_PURPLE (FACE_COLOR_BLUE | FACE_COLOR_RED)
+
 //Streamming
 #define PART_BOUNDARY "123456789000000000000987654321"
 //Configuracion del puerto para streaming
@@ -51,13 +60,14 @@ extern camera_fb_t *fb;
 
 static void send_face_list(void);
 
+/*
 typedef struct
   {
   uint8_t *image;
   box_array_t *net_boxes;
   dl_matrix3d_t *face_id;
   } http_img_process_result;
-
+*/
 camera_fb_t *fb = NULL; //Global para todos los modulos que usen la camara. Aqui se llena, el resto solo lee
 
 //websockets
@@ -105,12 +115,6 @@ typedef union
   fptp_t *float_p;
   uint8_t *uint8_p;  
   }item_t;
-//*******Recupero la pagina inicial***********   
-//extern const unsigned char index_html_zip_start[] asm("_binary_src_www_index_html_zip_start");
-//extern const unsigned char index_html_zip_end[]   asm("_binary_src_www_index_html_zip_end");
-//size_t index_html_zip_len;
-
-camera_fb_t *xfb;
 
 typedef enum
 {
@@ -138,6 +142,7 @@ boolean reconocerCaras=true;
 //Prototipos de funciones
 boolean recuperaDatosCaras(boolean debug);
 boolean parseaConfiguracionCaras(String contenido);
+static void draw_face_boxes(dl_matrix3du_t *image_matrix, box_array_t *boxes);
 /***************************************Inicializa reconocimiento*****************************************************************/
 /**********************************************************/
 /*                                                        */
@@ -394,7 +399,7 @@ int caraReconocida(String nombre)
     topic="CaraReconocida";
     payload=String("{\"nombre\": \"")+ nombre + String("\", \"Hora\": \"") + reloj.getHora() + String("\"}");
       
-    Serial.printf("Se envia:\ntopic: %s | payload: %s\n",topic.c_str(),payload.c_str());
+    if(debugGlobal) Serial.printf("Se envia:\ntopic: %s | payload: %s\n",topic.c_str(),payload.c_str());
     if (miMQTT.enviarMQTT(topic,payload)) return OK;   
     return KO;
     } 
@@ -412,101 +417,152 @@ int caraReconocida(String nombre)
 /**********************************************************/
 void reconocimientoFacial(boolean debug) 
   {    
-  if(debug) Serial.printf("*************Reconocimiento facial*****************\nEmpezamos...\n");  
-  dl_matrix3du_t *image_matrix = dl_matrix3du_alloc(1, 320, 240, 3);
-  http_img_process_result out_res = {0};
-  out_res.image = image_matrix->item;
+  if(debug) Serial.printf("*************Reconocimiento facial*****************\n");  
+  if(debug) Serial.printf("Ejecutadose en el core %i\n",xPortGetCoreID());
 
-  if(debug) Serial.printf("reconocimientoFacial() ejecutado en el core %i\n",xPortGetCoreID());
+  fb = esp_camera_fb_get();
+  if (fb!=NULL)
+    {
+    if(debug) Serial.printf("Imagen leida de la camara\n");
+    dl_matrix3du_t *image_matrix =  dl_matrix3du_alloc(1, fb->width, fb->height, 3);//dl_matrix3du_alloc(1, 320, 240, 3); //NO GESTIONO QUE SEA NULL
+    if(!image_matrix) Serial.printf("AAAArrrrrrgggggghhhh!!!!!!!!!!!!!!!!!!");
 
-  if(debug) Serial.printf("Leo la imagen de la camara\n");
+    //uint8_t *image_x=image_matrix->item;
+    //box_array_t *net_boxes_x=NULL;
+    //dl_matrix3d_t *face_id_x=NULL;
+
+    ////Sustituyo:
+    ////out_res.image por image_x 1 sustitucion
+    ////out_res.net_boxes por net_boxes_x 17 sustituciones
+    ////out_res.face_id por face_id_x 4 sustituciones
+
+    ////http_img_process_result out_res = {NULL,NULL,NULL};
+    ////out_res.image = image_matrix->item;
+    //out_res.net_boxes = NULL;
+    //out_res.face_id = NULL;
+    /**************************INICIO RECONOCER CARA*********************/
+    if(reconocerCaras)
+      {
+      if(debug) Serial.printf("Convierte la imagen\n");
+      //fmt2rgb888(fb->buf, fb->len, fb->format, image_x); //NO GESTIONO EL KO!!! 
+      fmt2rgb888(fb->buf, fb->len, fb->format, image_matrix->item); //NO GESTIONO EL KO!!! 
+
+      if(debug) Serial.printf("Evalua si hay una cara\n");
+      box_array_t *net_boxes_x = face_detect(image_matrix, &mtmn_config);
+      if (net_boxes_x)
+        {
+        if (align_face(net_boxes_x, image_matrix, aligned_face) == ESP_OK)
+          {
+          //Se ha detectado una cara
+          if(debug) Serial.printf("Hay una cara\n");
+          draw_face_boxes(image_matrix, net_boxes_x);
+
+          dl_matrix3d_t *face_id_x = get_face_id(aligned_face);////////DA CORE
+
+          if (g_state == START_ENROLL)
+            {
+            int left_sample_face = enroll_face_id_to_flash_with_name(&st_face_list, face_id_x, st_name.enroll_name);
+            char enrolling_message[64];
+            sprintf(enrolling_message, "SAMPLE NUMBER %d FOR %s", ENROLL_CONFIRM_TIMES - left_sample_face, st_name.enroll_name);
+            enviarWSTXT(enrolling_message);
+
+            if (left_sample_face == 0)
+              {
+              ESP_LOGI(TAG, "Enrolled Face ID: %s", st_face_list.tail->id_name);
+              g_state = START_STREAM;
+              char captured_message[64];
+              sprintf(captured_message, "FACE CAPTURED FOR %s", st_face_list.tail->id_name);
+              enviarWSTXT(captured_message);
+              send_face_list();
+              }
+            }
+          else
+            {     
+            if (st_face_list.count > 0)
+              {
+              face_id_node *f = recognize_face_with_name(&st_face_list, face_id_x);
+              if (f)
+                {
+                //cara reconocida
+                String cad="Reconocido: "+ String(f->id_name);  
+                if(debug) Serial.printf("%s\n", cad.c_str());
+                enviarWSTXT(cad);
+                caraReconocida(f->id_name);
+                }
+              else
+                {
+                //cara no reconocida 
+                if(debug) Serial.printf("Cara no reconocida\n"); 
+                enviarWSTXT("Cara no reconocida");
+                }
+              }
+            }
+          dl_matrix3d_free(face_id_x); //Evito memory leaks
+          }
+          //Evito memory leaks
+          free(net_boxes_x->score);
+          free(net_boxes_x->box);
+          free(net_boxes_x->landmark);
+          free(net_boxes_x);
+        }
+      else
+        {
+        enviarWSTXT("No se detecta cara");
+        //No se ha detectado cara  
+        }
+      }
+    /**************************FIN RECONOCER CARA*********************/
+    //Si esta en modo streamming
+    if (g_state == START_STREAM && cliente.id!=NOT_CONNECTED) 
+      {
+      //Serial.println("Enviando imagen cliente: %i tamaño:%i",cliente.id,fb->len);
+      if(cliente.id!=NOT_CONNECTED) webSocket.sendBIN(cliente.id, (const uint8_t *)fb->buf, fb->len);
+      }
+
+    if(debug) Serial.printf("Liberamos y salimos\n");
+    dl_matrix3du_free(image_matrix); //void dl_matrix3du_free(dl_matrix3du_t *m); en dl_lib_matrix3d.h 
+    }
+
   if(fb!=NULL) 
     {
     esp_camera_fb_return(fb);
     fb=NULL;
-    }
-
-  fb = esp_camera_fb_get();
-/**************************INICIO RECONOCER CARA*********************/
-  if(reconocerCaras)
-    {
-    out_res.net_boxes = NULL;
-    out_res.face_id = NULL;
-
-    if(debug) Serial.printf("Convierte la imagen\n");
-    fmt2rgb888(fb->buf, fb->len, fb->format, out_res.image);
-
-    if(debug) Serial.printf("Evalua si hay una cara\n");
-    out_res.net_boxes = face_detect(image_matrix, &mtmn_config);
-
-    if (out_res.net_boxes)
-      {
-      if (align_face(out_res.net_boxes, image_matrix, aligned_face) == ESP_OK)
-        {
-        //Se ha detectado una cara
-        if(debug) Serial.printf("Hay una cara\n");
-        out_res.face_id = get_face_id(aligned_face);////////DA CORE
-
-        if (g_state == START_ENROLL)
-          {
-          int left_sample_face = enroll_face_id_to_flash_with_name(&st_face_list, out_res.face_id, st_name.enroll_name);
-          char enrolling_message[64];
-          sprintf(enrolling_message, "SAMPLE NUMBER %d FOR %s", ENROLL_CONFIRM_TIMES - left_sample_face, st_name.enroll_name);
-          enviarWSTXT(enrolling_message);
-
-          if (left_sample_face == 0)
-            {
-            ESP_LOGI(TAG, "Enrolled Face ID: %s", st_face_list.tail->id_name);
-            g_state = START_STREAM;
-            char captured_message[64];
-            sprintf(captured_message, "FACE CAPTURED FOR %s", st_face_list.tail->id_name);
-            enviarWSTXT(captured_message);
-            send_face_list();
-            }
-          }
-        else
-          {     
-          if (st_face_list.count > 0)
-            {
-            face_id_node *f = recognize_face_with_name(&st_face_list, out_res.face_id);
-            if (f)
-              {
-              //cara reconocida
-              String cad="Reconocido: "+ String(f->id_name);  
-              if(debug || true) Serial.printf("%s\n", cad.c_str());
-              enviarWSTXT(cad);
-              caraReconocida(f->id_name);
-              }
-            else
-              {
-              //cara no reconocida 
-              if(debug) Serial.printf("Cara no reconocida\n"); 
-              enviarWSTXT("Cara no reconocida");
-              }
-            }
-          }
-
-        dl_matrix3d_free(out_res.face_id);
-        }
-      }
-    else
-      {
-      enviarWSTXT("No se detecta cara");
-      //No se ha detectado cara  
-      }
-    }
-  /**************************FIN RECONOCER CARA*********************/
-  //Si esta en modo streamming
-  if (g_state == START_STREAM && cliente.id!=NOT_CONNECTED) 
-    {
-    //Serial.println("Enviando imagen cliente: %i tamaño:%i",cliente.id,fb->len);
-    if(cliente.id!=NOT_CONNECTED) webSocket.sendBIN(cliente.id, (const uint8_t *)fb->buf, fb->len);
-    }
-
-  if(debug) Serial.printf("Liberamos y salimos\n");
-  dl_matrix3du_free(image_matrix); //void dl_matrix3du_free(dl_matrix3du_t *m); en dl_lib_matrix3d.h
+    }     
   }
  
+ static void draw_face_boxes(dl_matrix3du_t *image_matrix, box_array_t *boxes)
+  {
+  int x, y, w, h, i;
+  uint32_t color = FACE_COLOR_YELLOW;
+  fb_data_t fb;
+  fb.width = image_matrix->w;
+  fb.height = image_matrix->h;
+  fb.data = image_matrix->item;
+  fb.bytes_per_pixel = 3;
+  fb.format = FB_BGR888;
+  for (i = 0; i < boxes->len; i++)
+    {
+    // rectangle box
+    x = (int)boxes->box[i].box_p[0];
+    y = (int)boxes->box[i].box_p[1];
+    w = (int)boxes->box[i].box_p[2] - x + 1;
+    h = (int)boxes->box[i].box_p[3] - y + 1;
+    fb_gfx_drawFastHLine(&fb, x, y, w, color);
+    fb_gfx_drawFastHLine(&fb, x, y+h-1, w, color);
+    fb_gfx_drawFastVLine(&fb, x, y, h, color);
+    fb_gfx_drawFastVLine(&fb, x+w-1, y, h, color);
+#if 0
+    // landmark
+    int x0, y0, j;
+    for (j = 0; j < 10; j+=2) 
+      {
+      x0 = (int)boxes->landmark[i].landmark_p[j];
+      y0 = (int)boxes->landmark[i].landmark_p[j+1];
+      fb_gfx_fillRect(&fb, x0, y0, 3, 3, color);
+      }
+#endif
+    }
+  }  
 /*********************************** Fin reconocimiento****************************************************************/
 
 /*********************************** Inicio WebSocket *****************************************************************/
@@ -615,9 +671,12 @@ void gestionaMensajes(uint8_t cliente, String mensaje) //Tiene que implementar l
 
   if (mensaje == "foto")  
     {
-    Serial.println("Guardando  foto en la SD...");
-    webSocket.sendTXT(cliente, "foto");
-    webSocket.sendBIN(cliente,fb->buf, fb->len);//uint8_t num, const uint8_t * payload, size_t length);
+    Serial.println("Enviando foto al cliente...");
+    if(fb!=NULL)
+      {
+      webSocket.sendTXT(cliente, "foto");
+      webSocket.sendBIN(cliente,fb->buf, fb->len);//uint8_t num, const uint8_t * payload, size_t length);
+      }
     }
 
   if (mensaje == "reconoce")  
@@ -676,7 +735,6 @@ void webSocketEvent(uint8_t clienteId, WStype_t type, uint8_t * payload, size_t 
 
         //Lo paso al estado inicial
         send_face_list();
-        //gestionaMensajes(clienteId,"stream");
         }
         break;
     case WStype_TEXT:

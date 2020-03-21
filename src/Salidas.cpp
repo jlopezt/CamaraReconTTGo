@@ -151,7 +151,7 @@ void SalidasClass::actualizaSalidas(bool debug)
         if(millis()>=reles[id].getFinPulso()) //El pulso ya ha acabado
           {
           conmutaRele(id,!cacharro.getNivelActivo(),debugGlobal);  
-          Serial.printf("Fin del pulso. millis()= %lu\n",millis());
+          if(debug) Serial.printf("Fin del pulso. millis()= %lu\n",millis());
           }//del if del fin de pulso
         }//del if de desboda
       else //El contador de millis desbordar durante el pulso
@@ -161,7 +161,7 @@ void SalidasClass::actualizaSalidas(bool debug)
           if(millis()>=reles[id].getFinPulso()) 
             {
             conmutaRele(id,!cacharro.getNivelActivo(),debugGlobal);
-            Serial.printf("Fin del pulso. millis()= %lu\n",millis());
+            if(debug) Serial.printf("Fin del pulso. millis()= %lu\n",millis());
             }//del if del fin de pulso
           }//del if ha desbordado ya
         }//else del if de no desborda
