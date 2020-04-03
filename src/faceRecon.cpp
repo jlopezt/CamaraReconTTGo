@@ -59,15 +59,8 @@
 extern camera_fb_t *fb;
 
 static void send_face_list(void);
+int8_t configuraSensor(const char* variable, int8_t valor);
 
-/*
-typedef struct
-  {
-  uint8_t *image;
-  box_array_t *net_boxes;
-  dl_matrix3d_t *face_id;
-  } http_img_process_result;
-*/
 camera_fb_t *fb = NULL; //Global para todos los modulos que usen la camara. Aqui se llena, el resto solo lee
 
 //websockets
@@ -142,7 +135,6 @@ boolean reconocerCaras=true;
 //Prototipos de funciones
 boolean recuperaDatosCaras(boolean debug);
 boolean parseaConfiguracionCaras(String contenido);
-static void draw_face_boxes(dl_matrix3du_t *image_matrix, box_array_t *boxes);
 /***************************************Inicializa reconocimiento*****************************************************************/
 /**********************************************************/
 /*                                                        */
@@ -217,6 +209,54 @@ boolean parseaConfiguracionCaras(String contenido)
   if (json.containsKey("confirm_times")) confirm_times=json["confirm_times"]; 
   if (json.containsKey("intervaloReconocimiento")) intervaloReconocimiento=json["intervaloReconocimiento"]; 
   
+  //Configuracion de la camara
+  int8_t valor=0;
+  if (json.containsKey("hmirror"))
+    {
+    valor=json.get<int>("hmirror"); 
+    configuraSensor("hmirror",valor);
+    }
+  else if (json.containsKey("vflip")) 
+    {
+    valor=json.get<int>("vflip"); 
+    configuraSensor("vflip",valor);
+    }  
+  else if (json.containsKey("special_effect"))
+    {
+    valor=json.get<int>("special_effect"); 
+    configuraSensor("special_effect",valor);
+    }
+  else if (json.containsKey("wb_mode"))
+    {
+    valor=json.get<int>("wb_mode"); 
+    configuraSensor("wb_mode",valor);
+    }
+  else if (json.containsKey("framesize"))
+    {
+    valor=json.get<int>("framesize"); 
+    configuraSensor("framesize",valor);
+    }
+  else if (json.containsKey("quality"))
+    {
+    valor=json.get<int>("quality"); 
+    configuraSensor("quality",valor);
+    }
+  else if (json.containsKey("contrast"))
+    {
+    valor=json.get<int>("contrast"); 
+    configuraSensor("contrast",valor);
+    }
+  else if (json.containsKey("brightness"))
+    {
+    valor=json.get<int>("brightness"); 
+    configuraSensor("brightness",valor);
+    }
+  else if (json.containsKey("saturation"))
+    {
+    valor=json.get<int>("saturation"); 
+    configuraSensor("saturation",valor);
+    }
+
   JsonArray& caras = json["face_id_nodes"];
 
   //Inicializo la lista de caras con el contador y el numero de confirmaciones
@@ -363,6 +403,68 @@ boolean salvar_lista_face_id_a_fichero(face_id_name_list *lista, String ficheroC
 
   return true;
 }  
+
+int8_t configuraSensor(const char* variable, int8_t valor)
+  {
+  //int valor = atoi(value);
+  sensor_t * s = esp_camera_sensor_get();
+  int8_t res = 0;
+
+  if(!strcmp(variable, "framesize")) {if(s->pixformat == PIXFORMAT_JPEG) res = s->set_framesize(s, (framesize_t)valor);}
+  /*
+  value="10" -->UXGA(1600x1200) 
+  value="9"  -->SXGA(1280x1024) 
+  value="8"  -->XGA(1024x768) 
+  value="7"  -->SVGA(800x600) 
+  value="6"  -->VGA(640x480) 
+  value="5"  -->CIF(400x296) 
+  value="4"  -->QVGA(320x240) 
+  value="3"  -->HQVGA(240x176) 
+  value="0"  -->QQVGA(160x120)   
+  */
+  else if(!strcmp(variable, "quality")) res = s->set_quality(s, valor); //10 - 63
+  else if(!strcmp(variable, "contrast")) res = s->set_contrast(s, valor); //-2 - +2
+  else if(!strcmp(variable, "brightness")) res = s->set_brightness(s, valor); //-2 - +2
+  else if(!strcmp(variable, "saturation")) res = s->set_saturation(s, valor); //-2 - +2
+  else if(!strcmp(variable, "gainceiling")) res = s->set_gainceiling(s, (gainceiling_t)valor); //+2 - +128
+  else if(!strcmp(variable, "colorbar")) res = s->set_colorbar(s, valor); //check-box
+  else if(!strcmp(variable, "awb")) res = s->set_whitebal(s, valor); //check-box 
+  else if(!strcmp(variable, "agc")) res = s->set_gain_ctrl(s, valor); //check-box
+  else if(!strcmp(variable, "aec")) res = s->set_exposure_ctrl(s, valor); //check-box
+  else if(!strcmp(variable, "hmirror")) res = s->set_hmirror(s, valor); //check-box
+  else if(!strcmp(variable, "vflip")) res = s->set_vflip(s, valor); //check-box
+  else if(!strcmp(variable, "awb_gain")) res = s->set_awb_gain(s, valor); //check-box
+  else if(!strcmp(variable, "agc_gain")) res = s->set_agc_gain(s, valor); //0 - +30
+  else if(!strcmp(variable, "aec_value")) res = s->set_aec_value(s, valor); //0 - +1200
+  else if(!strcmp(variable, "aec2")) res = s->set_aec2(s, valor); //check-box
+  else if(!strcmp(variable, "dcw")) res = s->set_dcw(s, valor); //check-box
+  else if(!strcmp(variable, "bpc")) res = s->set_bpc(s, valor); //check-box
+  else if(!strcmp(variable, "wpc")) res = s->set_wpc(s, valor); //check-box
+  else if(!strcmp(variable, "raw_gma")) res = s->set_raw_gma(s, valor); //check-box
+  else if(!strcmp(variable, "lenc")) res = s->set_lenc(s, valor); //check-box
+  else if(!strcmp(variable, "special_effect")) res = s->set_special_effect(s, valor);
+  /*
+  value="0"-->No Effect
+  value="1"-->Negative            
+  value="2"-->Grayscale           
+  value="3"-->Red Tint            
+  value="4"-->Green Tint          
+  value="5"-->Blue Tint           
+  value="6"-->Sepia               
+  */
+  else if(!strcmp(variable, "wb_mode")) res = s->set_wb_mode(s, valor);
+  /*
+  value="0"-->Auto
+  value="1"-->Sunny          
+  value="2"-->Cloudy         
+  value="3"-->Office         
+  value="4"-->Home             
+  */
+  else if(!strcmp(variable, "ae_level")) res = s->set_ae_level(s, valor); //-2 - +2
+  else {res = -1;}    
+
+  return res;
+  }
 /**********************************************************Fin configuracion******************************************************************/  
 
 /******************************************************/
@@ -426,25 +528,11 @@ void reconocimientoFacial(boolean debug)
     if(debug) Serial.printf("Imagen leida de la camara\n");
     dl_matrix3du_t *image_matrix =  dl_matrix3du_alloc(1, fb->width, fb->height, 3);//dl_matrix3du_alloc(1, 320, 240, 3); //NO GESTIONO QUE SEA NULL
     if(!image_matrix) Serial.printf("AAAArrrrrrgggggghhhh!!!!!!!!!!!!!!!!!!");
-
-    //uint8_t *image_x=image_matrix->item;
-    //box_array_t *net_boxes_x=NULL;
-    //dl_matrix3d_t *face_id_x=NULL;
-
-    ////Sustituyo:
-    ////out_res.image por image_x 1 sustitucion
-    ////out_res.net_boxes por net_boxes_x 17 sustituciones
-    ////out_res.face_id por face_id_x 4 sustituciones
-
-    ////http_img_process_result out_res = {NULL,NULL,NULL};
-    ////out_res.image = image_matrix->item;
-    //out_res.net_boxes = NULL;
-    //out_res.face_id = NULL;
     /**************************INICIO RECONOCER CARA*********************/
     if(reconocerCaras)
       {
       if(debug) Serial.printf("Convierte la imagen\n");
-      //fmt2rgb888(fb->buf, fb->len, fb->format, image_x); //NO GESTIONO EL KO!!! 
+
       fmt2rgb888(fb->buf, fb->len, fb->format, image_matrix->item); //NO GESTIONO EL KO!!! 
 
       if(debug) Serial.printf("Evalua si hay una cara\n");
@@ -455,9 +543,8 @@ void reconocimientoFacial(boolean debug)
           {
           //Se ha detectado una cara
           if(debug) Serial.printf("Hay una cara\n");
-          draw_face_boxes(image_matrix, net_boxes_x);
 
-          dl_matrix3d_t *face_id_x = get_face_id(aligned_face);////////DA CORE
+          dl_matrix3d_t *face_id_x = get_face_id(aligned_face);
 
           if (g_state == START_ENROLL)
             {
@@ -507,8 +594,8 @@ void reconocimientoFacial(boolean debug)
         }
       else
         {
-        enviarWSTXT("No se detecta cara");
         //No se ha detectado cara  
+        enviarWSTXT("No se detecta cara");
         }
       }
     /**************************FIN RECONOCER CARA*********************/
@@ -520,7 +607,7 @@ void reconocimientoFacial(boolean debug)
       }
 
     if(debug) Serial.printf("Liberamos y salimos\n");
-    dl_matrix3du_free(image_matrix); //void dl_matrix3du_free(dl_matrix3du_t *m); en dl_lib_matrix3d.h 
+    dl_matrix3du_free(image_matrix);
     }
 
   if(fb!=NULL) 
@@ -528,41 +615,7 @@ void reconocimientoFacial(boolean debug)
     esp_camera_fb_return(fb);
     fb=NULL;
     }     
-  }
- 
- static void draw_face_boxes(dl_matrix3du_t *image_matrix, box_array_t *boxes)
-  {
-  int x, y, w, h, i;
-  uint32_t color = FACE_COLOR_YELLOW;
-  fb_data_t fb;
-  fb.width = image_matrix->w;
-  fb.height = image_matrix->h;
-  fb.data = image_matrix->item;
-  fb.bytes_per_pixel = 3;
-  fb.format = FB_BGR888;
-  for (i = 0; i < boxes->len; i++)
-    {
-    // rectangle box
-    x = (int)boxes->box[i].box_p[0];
-    y = (int)boxes->box[i].box_p[1];
-    w = (int)boxes->box[i].box_p[2] - x + 1;
-    h = (int)boxes->box[i].box_p[3] - y + 1;
-    fb_gfx_drawFastHLine(&fb, x, y, w, color);
-    fb_gfx_drawFastHLine(&fb, x, y+h-1, w, color);
-    fb_gfx_drawFastVLine(&fb, x, y, h, color);
-    fb_gfx_drawFastVLine(&fb, x+w-1, y, h, color);
-#if 0
-    // landmark
-    int x0, y0, j;
-    for (j = 0; j < 10; j+=2) 
-      {
-      x0 = (int)boxes->landmark[i].landmark_p[j];
-      y0 = (int)boxes->landmark[i].landmark_p[j+1];
-      fb_gfx_fillRect(&fb, x0, y0, 3, 3, color);
-      }
-#endif
-    }
-  }  
+  } 
 /*********************************** Fin reconocimiento****************************************************************/
 
 /*********************************** Inicio WebSocket *****************************************************************/

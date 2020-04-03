@@ -1,0 +1,51 @@
+"framesize"
+  /*
+  value="10" -->UXGA(1600x1200)
+  value="9"  -->SXGA(1280x1024)
+  value="8"  -->XGA(1024x768)
+  value="7"  -->SVGA(800x600)
+  value="6"  -->VGA(640x480)
+  value="5"  -->CIF(400x296)
+  value="4"  -->QVGA(320x240)
+  value="3"  -->HQVGA(240x176)
+  value="0"  -->QQVGA(160x120)
+  */
+"quality"//10 - 63
+"contrast"//-2 - +2
+"brightness"//-2 - +2
+"saturation"//-2 - +2
+"gainceiling"//+2 - +128
+"colorbar"//check-box
+"awb"//check-box
+"agc"//check-box
+"aec"//check-box
+"hmirror"//check-box
+"vflip"//check-box
+"awb_gain"//check-box
+"agc_gain"//0 - +30
+"aec_value"//0 - +1200
+"aec2"//check-box
+"dcw"//check-box
+"bpc"//check-box
+"wpc"//check-box
+"raw_gma"//check-box
+"lenc"//check-box
+"special_effect"
+  /*
+  value="0"-->No Effect
+  value="1"-->Negative
+  value="2"-->Grayscale
+  value="3"-->Red Tint
+  value="4"-->Green Tint
+  value="5"-->Blue Tint
+  value="6"-->Sepia
+  */
+"wb_mode"
+  /*
+  value="0"-->Auto
+  value="1"-->Sunny
+  value="2"-->Cloudy
+  value="3"-->Office
+  value="4"-->Home
+  */
+"ae_level"//-2 - +2                                     
