@@ -173,7 +173,7 @@ boolean recuperaDatosCaras(boolean debug)
 
   if (debug) Serial.println("Recupero configuracion de archivo...");
   
-  if(!SistemaFicheros.leeFicheroConfig(FACE_RECON_CONFIG_FILE, cad)) 
+  if(!SistemaFicheros.leeFichero(FACE_RECON_CONFIG_FILE, cad)) 
     {
     //Confgiguracion por defecto
     Serial.printf("No existe fichero de configuracion de Caras\n");
@@ -399,7 +399,7 @@ boolean salvar_lista_face_id_a_fichero(face_id_name_list *lista, String ficheroC
   //Salvo el fichero de configuracion
   String cad;
   root.printTo(cad);
-  if(!SistemaFicheros.salvaFicheroConfig(ficheroConfig,ficheroConfigBak,cad)) return false;
+  if(!SistemaFicheros.salvaFichero(ficheroConfig,ficheroConfigBak,cad)) return false;
 
   return true;
 }  
@@ -498,11 +498,16 @@ int caraReconocida(String nombre)
     Salidas.pulsoRele(0); //Fuerzo a que el primer rele es el que abre la puerta!!!!!
   
     //Informa poir MQTT que se ha habierto la puerta y a quien y cuando
-    topic="CaraReconocida";
+    topic="/camara/caraReconocida";
     payload=String("{\"nombre\": \"")+ nombre + String("\", \"Hora\": \"") + reloj.getHora() + String("\"}");
       
     if(debugGlobal) Serial.printf("Se envia:\ntopic: %s | payload: %s\n",topic.c_str(),payload.c_str());
-    if (miMQTT.enviarMQTT(topic,payload)) return OK;   
+    if (miMQTT.enviarMQTT(topic,payload))
+      {
+      topic="puerta/cerradura";
+      payload="{\"id\":0,\"estado\":\"pulso\"}";
+      if (miMQTT.enviarMQTT(topic,payload)) return OK;   
+      }
     return KO;
     } 
   

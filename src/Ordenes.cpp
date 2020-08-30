@@ -365,9 +365,9 @@ void func_comando_nivelActivo(int iParametro, char* sParametro, float fParametro
 
     String cad="";
     
-    if(!SistemaFicheros.leeFicheroConfig(GLOBAL_CONFIG_FILE, cad)) Serial.println("No se pudo leer el fichero");
+    if(!SistemaFicheros.leeFichero(GLOBAL_CONFIG_FILE, cad)) Serial.println("No se pudo leer el fichero");
     cad=cacharro.generaJsonConfiguracionNivelActivo(cad, cacharro.getNivelActivo());
-    if(!SistemaFicheros.salvaFicheroConfig(GLOBAL_CONFIG_FILE, GLOBAL_CONFIG_BAK_FILE, cad)) Serial.println("No se pudo salvar el fichero");      
+    if(!SistemaFicheros.salvaFichero(GLOBAL_CONFIG_FILE, GLOBAL_CONFIG_BAK_FILE, cad)) Serial.println("No se pudo salvar el fichero");      
     }
   Serial.printf("\nNivel activo: %i\n",cacharro.getNivelActivo());  
   }  

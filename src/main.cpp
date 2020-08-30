@@ -7,7 +7,8 @@
  */
  
 /***************************** Defines *****************************/
-#define MAX_VUELTAS      UINT16_MAX// 65535 
+#define MAX_VUELTAS      UINT16_MAX // 65535 
+#define LED_BUILTIN               4 //GPIO del led de la placa en los ESP32-CAM   
 
 // Una vuela de loop son ANCHO_INTERVALO segundos 
 #define ANCHO_INTERVALO                 100 //Ancho en milisegundos de la rodaja de tiempo
@@ -30,7 +31,6 @@
 #include <Ordenes.h>
 #include <ServidorWeb.h>
 #include <camara.h>
-//#include <streaming.h>
 #include <faceRecon.h>
 #include "soc/soc.h"           // Disable brownout problems
 #include "soc/rtc_cntl_reg.h"  // Disable brownout problems
@@ -40,15 +40,31 @@
 uint16_t vuelta = MAX_VUELTAS-100;//0; //vueltas de loop
 int debugGlobal=0; //por defecto desabilitado
 boolean trazaMemoria=false;
-boolean candado=false; //Candado de configuracion. true implica que la ultima configuracion fue mal
 /***************************** variables globales *****************************/
-      
+
+/************************* FUNCIONES PARA EL BUITIN LED ***************************/
+void configuraLed(void){pinMode(LED_BUILTIN, OUTPUT);}
+void enciendeLed(void){digitalWrite(LED_BUILTIN, HIGH);}
+void apagaLed(void){digitalWrite(LED_BUILTIN, LOW);}
+void parpadeaLed(uint8_t veces, uint16_t delayed=100)
+  {
+  for(uint8_t i=0;i<2*veces;i++)
+    {  
+    delay(delayed);
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+    }
+  }
+/***********************************************************************************/  
+
+/*************************************** SETUP ***************************************/      
 void setup()
   {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector  
 
   Serial.begin(115200);
-    
+  configuraLed();
+  enciendeLed();
+   
   Serial.printf("\n\n\n");
   Serial.printf("*************** %s ***************\n",NOMBRE_FAMILIA);
   Serial.printf("*************** %s ***************\n",VERSION);
@@ -62,62 +78,47 @@ void setup()
   //Ficheros - Lo primero para poder leer los demas ficheros de configuracion
   if(!SistemaFicheros.inicializaFicheros(debugGlobal))Serial.println("Error al inicializar el sistema de ficheros");
 
-  /*//Compruebo si existe candado, si existe la ultima configuracion fue mal
-  if(SistemaFicheros.existeFichero(FICHERO_CANDADO)) 
-    {
-    Serial.printf("Candado puesto. Configuracion por defecto");
-    candado=true; 
-    debugGlobal=1;
-    }
-  else
-    {
-    candado=false;
-    //Genera candado
-    if(SistemaFicheros.salvaFichero(FICHERO_CANDADO,"","JSD")) Serial.println("Candado creado");
-    else Serial.println("ERROR - No se pudo crear el candado");
-    }
- */
   //Configuracion general
-  Serial.printf("\n\nInit General ---------------------------------------------------------------------\n");
+  Serial.printf("\n\nInit General --------------------------------------------------------------------------\n");
   cacharro.inicializaConfiguracion(debugGlobal);
+  parpadeaLed(1);
 
   //Wifi
-  Serial.println("\n\nInit WiFi -----------------------------------------------------------------------\n");
+  Serial.println("\n\nInit WiFi ---------------------------------------------------------------------------\n");
   if (RedWifi.inicializaWifi(1))//debugGlobal)) No tiene sentido debugGlobal, no hay manera de activarlo
     {
+    parpadeaLed(2);
     /*----------------Inicializaciones que necesitan red-------------*/
     //OTA
-    Serial.println("\n\nInit OTA -----------------------------------------------------------------------\n");
+    Serial.println("\n\nInit OTA ----------------------------------------------------------------------------\n");
     inicializaOTA(debugGlobal);
     //SNTP
-    Serial.printf("\n\nInit SNTP ----------------------------------------------------------------------\n");
+    Serial.printf("\n\nInit SNTP ----------------------------------------------------------------------------\n");
     reloj.inicializaReloj();    
     //MQTT
-    Serial.println("\n\nInit MQTT -----------------------------------------------------------------------\n");
+    Serial.println("\n\nInit MQTT ---------------------------------------------------------------------------\n");
     miMQTT.inicializaMQTT();
     //WebServer
-    Serial.println("\n\nInit Web --------------------------------------------------------------------------\n");
+    Serial.println("\n\nInit Web ----------------------------------------------------------------------------\n");
     inicializaWebServer();
     //FTPServer
-    Serial.println("\n\nInit FTP --------------------------------------------------------------------------\n");
+    Serial.println("\n\nInit FTP ----------------------------------------------------------------------------\n");
     ftpSrv.inicializaFTP(0);
     }
   else Serial.println("No se pudo conectar al WiFi");
+  parpadeaLed(1);
+  apagaLed();
 
   //Entradas
-  Serial.println("\n\nInit entradas ---------------------------------------------------------------------\n");
+  Serial.println("\n\nInit entradas ----------------------------------------------------------------------\n");
   Entradas.inicializaEntradas();
 
   //Salidas
-  Serial.println("\n\nInit salidas ---------------------------------------------------------------------\n");
+  Serial.println("\n\nInit salidas -----------------------------------------------------------------------\n");
   Salidas.inicializaSalidas();
 
-  //Secuenciador
-  //Serial.println("\n\nInit secuenciador ---------------------------------------------------------------------\n");
-  //Secuenciador.inicializaSecuenciador();
-  
   //Camara
-  Serial.println("\n\nInit camara ---------------------------------------------------------------------\n");
+  Serial.println("\n\nInit camara ------------------------------------------------------------------------\n");
   camara_init();
 
   //Websocket
@@ -125,16 +126,15 @@ void setup()
   WebSocket_init(true);
 
   //Reconocimiento facial
-  Serial.println("\n\nInit reconocimiento facial ---------------------------------------------------------------------\n");
+  Serial.println("\n\nInit reconocimiento facial ---------------------------------------------------------\n");
   faceRecon_init(true);
   
   //Ordenes serie
-  Serial.println("\n\nInit Ordenes ----------------------------------------------------------------------\n");  
+  Serial.println("\n\nInit Ordenes -----------------------------------------------------------------------\n");  
   Ordenes.inicializaOrden();//Inicializa los buffers de recepcion de ordenes desde PC
 
-  //Si ha llegado hasta aqui, todo ha ido bien y borro el candado
-  if(SistemaFicheros.borraFichero(FICHERO_CANDADO))Serial.println("Candado borrado");
-  else Serial.println("ERROR - No se pudo borrar el candado");
+  parpadeaLed(1,500);
+  apagaLed();//Por si acaso...
   
   Serial.printf("\n\n");
   Serial.println("***************************************************************");
@@ -144,7 +144,9 @@ void setup()
   Serial.println("***************************************************************");
   Serial.printf("\n\n");  
   }  
+/**********************************************************************************************/
 
+/****************************************** LOOP **********************************************/
 void loop()
   {  
   //referencia horaria de entrada en el bucle
@@ -159,7 +161,6 @@ void loop()
   if ((vuelta % FRECUENCIA_RECONOCIMIENTO_FACIAL)==0) reconocimientoFacial(debugGlobal); //atiende el servidor web
   if ((vuelta % FRECUENCIA_ENTRADAS)==0) Entradas.consultaEntradas(debugGlobal); //comprueba las entradas
   if ((vuelta % FRECUENCIA_SALIDAS)==0) Salidas.actualizaSalidas(debugGlobal); //comprueba las salidas
-  //if ((vuelta % FRECUENCIA_SECUENCIADOR)==0) Secuenciador.actualizaSecuenciador(debugGlobal); //Actualiza la salida del secuenciador
   //Prioridad 3: Interfaces externos de consulta    
   if ((vuelta % FRECUENCIA_SERVIDOR_WEB)==0) webServer(debugGlobal); //atiende el servidor web
   if ((vuelta % FRECUENCIA_SERVIDOR_FTP)==0) ftpSrv.handleFTP(); //atiende el servidor ftp

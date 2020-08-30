@@ -86,13 +86,11 @@ boolean SalidasClass::recuperaDatosSalidas(boolean debug)
 
   if (debug) Serial.println("Recupero configuracion de archivo...");
   
-  if(!SistemaFicheros.leeFicheroConfig(SALIDAS_CONFIG_FILE, cad)) 
+  if(!SistemaFicheros.leeFichero(SALIDAS_CONFIG_FILE, cad)) 
     {
     //Confgiguracion por defecto
     Serial.printf("No existe fichero de configuracion de Salidas\n");    
-    cad="{\"Salidas\": []}";
-    //Machaco el fichero de configuracion guardado con la configuracion por defecto
-    //if(SistemaFicheros.salvaFicheroConfig(SALIDAS_CONFIG_FILE, SALIDAS_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion de Salidas creado por defecto\n");
+    return false;
     }      
     
   return parseaConfiguracionSalidas(cad);

@@ -57,14 +57,11 @@ boolean miMQTTClass::recuperaDatosMQTT(boolean debug)
   publicarEntradas=1; 
   publicarSalidas=1;    
 
-  if(!SistemaFicheros.leeFicheroConfig(MQTT_CONFIG_FILE, cad)) 
+  if(!SistemaFicheros.leeFichero(MQTT_CONFIG_FILE, cad)) 
     {
     //Confgiguracion por defecto
     Serial.printf("No existe fichero de configuracion MQTT\n");
-    //cad="{\"IPBroker\": \"10.68.1.100\", \"puerto\": 1883, \"usuarioMQTT\": \"usuario\", \"passwordMQTT\": \"password\",  \"ID_MQTT\": \"garaje32/puerta\",  \"topicRoot\":  \"casa\",  \"keepAlive\": 0, \"publicarEntradas\": 1, \"publicarSalidas\": 0}";
-    cad="{\"IPBroker\": \"0.0.0.0\", \"puerto\": 1883, \"usuarioMQTT\": \"usuario\", \"passwordMQTT\": \"password\",  \"ID_MQTT\": \"" + String(NOMBRE_FAMILIA) + "\",  \"topicRoot\":  \"" + NOMBRE_FAMILIA + "\",  \"keepAlive\": 0, \"publicarEntradas\": 0, \"publicarSalidas\": 0}";
-    //salvo la config por defecto
-    //if(SistemaFicheros.salvaFicheroConfig(MQTT_CONFIG_FILE, MQTT_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion MQTT creado por defecto\n");    
+    return false;
     }
 
   return parseaConfiguracionMQTT(cad);
@@ -242,7 +239,12 @@ boolean miMQTTClass::enviarMQTT(String topic, String payload)
   //si y esta conectado envio, sino salgo con error
   if (clienteMQTT.connected()) 
     {
-    String topicCompleto=topicRoot+"/"+ID_MQTT+"/"+topic;  
+    //String topicCompleto=topicRoot+"/"+ID_MQTT+"/"+topic;  
+    String topicCompleto;
+    topicCompleto=topicRoot;
+    if(!topic.startsWith("/")) topicCompleto += "/"; 
+    topicCompleto += topic;  
+
     Serial.printf("Enviando:\ntopic:  %s | payload: %s\n",topicCompleto.c_str(),payload.c_str());
   
     if(clienteMQTT.beginPublish(topicCompleto.c_str(), payload.length(), false))//boolean beginPublish(const char* topic, unsigned int plength, boolean retained)

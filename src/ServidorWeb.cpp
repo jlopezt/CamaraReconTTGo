@@ -33,8 +33,8 @@ WebServer server(PUERTO_WEBSERVER); //ESP8266WebServer server[MAX_WEB_SERVERS];
 
 //Cadenas HTML precargadas
 String cabeceraHTML="";//Se inicializa en  funcion inicializaWebServer "<HTML><HEAD><TITLE>" + cacharro.getNombreDispositivo() + "</TITLE></HEAD><BODY>";
-String pieHTML="</BODY></HTML>";
-String enlaces="<TABLE>\n<CAPTION>Enlaces</CAPTION>\n<TR><TD><a href=\"info\" target=\"_self\">Info</a></TD></TR>\n<TR><TD><a href=\"test\" target=\"_self\">Test</a></TD></TR>\n<TR><TD><a href=\"restart\" target=\"_self\">Restart</a></TD></TR>\n<TR><TD><a href=\"estado\" target=\"_self\">Estado</a></TD></TR>\n<TR><TD><a href=\"particiones\" target=\"_self\">Particiones</a></TD></TR>\n<TR><TD><a href=\"listaFicheros\" target=\"_self\">Lista ficheros</a></TD></TR>\n<TR><TD><a href=\"estadoSalidas\" target=\"_self\">Estado salidas</a></TD></TR>\n<TR><TD><a href=\"estadoEntradas\" target=\"_self\">Estado entradas</a></TD></TR>\n<TR><TD><a href=\"planes\" target=\"_self\">Planes del secuenciador</a></TD></TR></TABLE>\n"; 
+String pieHTML="\n</BODY>\n</HTML>";
+String enlaces="\n<TABLE>\n<CAPTION>Enlaces</CAPTION>\n<TR><TD><a href=\"info\" target=\"_self\">Info</a></TD></TR>\n<TR><TD><a href=\"test\" target=\"_self\">Test</a></TD></TR>\n<TR><TD><a href=\"restart\" target=\"_self\">Restart</a></TD></TR>\n<TR><TD><a href=\"particiones\" target=\"_self\">Particiones</a></TD></TR>\n<TR><TD><a href=\"listaFicheros\" target=\"_self\">Lista ficheros</a></TD></TR>\n</TABLE>\n"; 
 
 /*******************************************************/
 /*                                                     */ 
@@ -66,23 +66,10 @@ void handleRoot()
   cad += "<BR><BR>\n";
   cad += enlaces;
   cad += "<BR><BR>" + cacharro.getNombreDispositivo() + " . Version " + String(VERSION) + ".";
+  cad += pieHTML;
 
   server.send(200, "text/html", cad);
   }
-
-/*************************************************/
-/*                                               */
-/*  Servicio de consulta de estado de            */
-/*  las Salidas y las entradas                   */
-/*  devuelve un formato json                     */
-/*                                               */
-/*************************************************/  
-void handleEstado(void)
-  {
-  String cad="";
-  
-  server.send(200, "text/json", cad); 
-  }  
 
 /*********************************************/
 /*                                           */
@@ -213,7 +200,7 @@ void handleSetNextBoot(void)
 
   if(server.hasArg("p")) //si existen esos argumentos
     {
-    if(setParticionProximoArranque(server.arg("p"))) cad += "EXITO";
+    if(setParticionProximoArranque(server.arg("p"))) handleParticiones();  //cad += "EXITO";
     else cad += "FRACASO";
     }
 
@@ -309,7 +296,12 @@ void handleCreaFichero(void)
     nombreFichero=server.arg("nombre");
     contenidoFichero=server.arg("contenido");
 
-    if(SistemaFicheros.salvaFichero( nombreFichero, nombreFichero+".bak", contenidoFichero)) cad += "Fichero salvado con exito<br>";
+    if(SistemaFicheros.salvaFichero( nombreFichero, nombreFichero+".bak", contenidoFichero)) //cad += "Fichero salvado con exito<br>";
+      { 
+      //cad += "Fichero salvado con exito<br>"; 
+      handleListaFicheros(); 
+      return; 
+      }      
     else cad += "No se pudo salvar el fichero<br>"; 
     }
   else cad += "Falta el argumento <nombre de fichero>"; 
@@ -336,7 +328,12 @@ void handleBorraFichero(void)
     {
     nombreFichero=server.arg("nombre");
 
-    if(SistemaFicheros.borraFichero(nombreFichero)) cad += "El fichero " + nombreFichero + " ha sido borrado.\n";
+    if(SistemaFicheros.borraFichero(nombreFichero)) //cad += "El fichero " + nombreFichero + " ha sido borrado.\n";
+      { 
+      //cad += "Fichero salvado con exito<br>"; 
+      handleListaFicheros(); 
+      return; 
+      }  
     else cad += "No sepudo borrar el fichero " + nombreFichero + ".\n"; 
     }
   else cad += "Falta el argumento <nombre de fichero>"; 
@@ -471,16 +468,14 @@ void handleNotFound()
 /*********************************** Inicializacion y configuracion *****************************************************************/
 void inicializaWebServer(void)
   {
-  cabeceraHTML="<HTML><HEAD><TITLE>" + cacharro.getNombreDispositivo() + " </TITLE></HEAD><BODY><h1><a href=\"../\" target=\"_self\">" + cacharro.getNombreDispositivo() + "</a><br></h1>";
+  cabeceraHTML="<!DOCTYPE html>\n<HTML>\n<HEAD><TITLE>" + cacharro.getNombreDispositivo() + " </TITLE></HEAD>\n<BODY>\n<h1><a href=\"../\" target=\"_self\">" + cacharro.getNombreDispositivo() + "</a><br></h1>";
   
   /*******Configuracion del Servicio Web***********/  
   //Inicializo los serivcios  
   //decalra las URIs a las que va a responder
   server.on("/", handleRoot); //Responde con la iodentificacion del modulo
-  server.on("/estado", handleEstado); //Servicio de estdo de reles
   
   server.on("/test", handleTest);  //URI de test
-
   server.on("/restart", handleRestart);  //URI de test
   server.on("/info", handleInfo);  //URI de test
 

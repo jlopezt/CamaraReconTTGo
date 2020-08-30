@@ -39,12 +39,10 @@ boolean cacharroClass::inicializaConfiguracion(boolean debug)
   nombre_dispositivo=String(NOMBRE_FAMILIA); //Nombre del dispositivo, por defecto el de la familia
   nivelActivo=LOW;  
   
-  if(!SistemaFicheros.leeFicheroConfig(GLOBAL_CONFIG_FILE, cad))
+  if(!SistemaFicheros.leeFichero(GLOBAL_CONFIG_FILE, cad))
     {
     Serial.printf("No existe fichero de configuracion global\n");
-    cad="{\"nombre_dispositivo\": \"" + String(NOMBRE_FAMILIA) + "\",\"NivelActivo\":0}"; //config por defecto    
-    //salvo la config por defecto
-    //if(SistemaFicheros.salvaFicheroConfig(GLOBAL_CONFIG_FILE, GLOBAL_CONFIG_BAK_FILE, cad)) Serial.printf("Fichero de configuracion global creado por defecto\n"); 
+    return false;
     }
 
   return parseaConfiguracionGlobal(cad);

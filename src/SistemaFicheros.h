@@ -23,8 +23,6 @@ class SistemaFicherosClass
     SistemaFicherosClass() {};
     boolean inicializaFicheros(int debug);
 
-    boolean leeFicheroConfig(String nombre, String &contenido);
-    boolean salvaFicheroConfig(String nombreFichero, String nombreFicheroBak, String contenidoFichero);
     boolean leeFicheroBin(String nombre, uint8_t *contenido,uint8_t inicio, uint16_t len); //devuelve len bytes desde inicio del fichero indicado donde apunte el puntero indicado. El puntero debe tener memoria asignada suficiente
     boolean salvaFicheroBin(String nombreFichero, String nombreFicheroBak, uint8_t *contenidoFichero, uint16_t len);
     boolean leeFichero(String nombre, String &contenido);

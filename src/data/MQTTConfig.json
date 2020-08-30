@@ -6,6 +6,6 @@
 "ID_MQTT": "puerta/camara", 
 "topicRoot": "casa", 
 "keepAlive": 0,
-"publicarEntradas": 1,
+"publicarEntradas": 0,
 "publicarSalidas": 0
 }

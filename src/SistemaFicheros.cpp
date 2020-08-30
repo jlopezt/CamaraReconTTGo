@@ -32,28 +32,6 @@ boolean SistemaFicherosClass::inicializaFicheros(int debug)
 }
 
 /************************************************/
-/* Recupera los datos de configuracion          */
-/* de un archivo, si hay bloqyueo de            */
-/* configuracion, devuelve KO                   */
-/************************************************/
-boolean SistemaFicherosClass::leeFicheroConfig(String nombre, String &contenido)
-  {
-  if(this->candado) return false; //la utima configuracion fue mal, los ficheros no valen. Tomamos configuracion pro defecto en todos los modulos
-  return (leeFichero(nombre, contenido));  
-  }
-
-/************************************************/
-/* Salva los datos de configuracion             */
-/* de un archivo, si hay bloqyueo de            */
-/* configuracion, devuelve KO                   */
-/************************************************/
-boolean SistemaFicherosClass::salvaFicheroConfig(String nombreFichero, String nombreFicheroBak, String contenidoFichero)
-  {
-  if(this->candado) return false; //la utima configuracion fue mal, los ficheros no valen. Tomamos configuracion pro defecto en todos los modulos
-  return (salvaFichero(nombreFichero, nombreFicheroBak, contenidoFichero));  
-  }
-
-/************************************************/
 /* Recupera los datos de                        */
 /* de un archivo cualquiera                     */
 /************************************************/
