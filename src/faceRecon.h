@@ -22,4 +22,7 @@ void faceRecon_init(boolean debug);
 void reconocimientoFacial(boolean debug);
 void delete_all_faces(void);
 void activaRecon(boolean activar);
+boolean getRecon(void);
+void flipRecon(void);
+
 #endif

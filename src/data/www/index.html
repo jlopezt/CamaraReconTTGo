@@ -283,6 +283,8 @@ document.addEventListener("DOMContentLoaded", function(event)
         if (message.data.substr(0, 8) == "listface") {addFaceToScreen(message.data.substr(9));} 
         else if (message.data == "delete_faces") {deleteAllFacesFromScreen();} 
         else if (message.data.substr(0, 10) == "depurador:") {document.getElementById("depurador").innerHTML = message.data;} 
+        else if (message.data.substr(0, 8) == "Recon=no") {reconocerCheck.value=false;} 
+        else if (message.data.substr(0, 8) == "Recon=si") {reconocerCheck.value=true;} 
         else {document.getElementById("current-status").innerHTML = message.data;}
         }
       if (message.data instanceof Blob) 

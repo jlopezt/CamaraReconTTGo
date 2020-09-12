@@ -10,11 +10,13 @@
 //#define CAMERA_MODEL_ESP_EYE
 //#define CAMERA_MODEL_M5STACK_PSRAM
 //#define CAMERA_MODEL_M5STACK_WIDE
-#define CAMERA_MODEL_AI_THINKER
+//#define CAMERA_MODEL_AI_THINKER
+#define CAMERA_MODEL_TTGO_TCAMERA
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
 #include <Global.h>
+#include "esp_camera.h"
 #include "camara.h"
 #include "camera_pins.h"
 /***************************** Includes *****************************/
@@ -76,9 +78,20 @@ void camara_init(void)
 
   sensor_t * s = esp_camera_sensor_get();
   s->set_framesize(s, FRAMESIZE_QVGA);
+  s->set_vflip(s, 1);
 
   #if defined(CAMERA_MODEL_M5STACK_WIDE)
     s->set_vflip(s, 1);
     s->set_hmirror(s, 1);
   #endif
   }
+
+
+  /***************************** Auxiliares **************************/
+  void volteaCamara(void)
+    {
+    static bool en = false;
+    sensor_t *s = esp_camera_sensor_get();
+    en = en ? 0 : 1;
+    s->set_vflip(s, en);
+    }

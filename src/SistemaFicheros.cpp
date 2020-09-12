@@ -181,24 +181,6 @@ boolean SistemaFicherosClass::formatearFS(void)
   return (SPIFFS.format());
   }
 
-/**************************************************/
-/* Si existe el fichero candado activa el candado */
-/**************************************************/
-boolean SistemaFicherosClass::setCandado(void) 
-  {
-    if(SistemaFicheros.existeFichero(FICHERO_CANDADO)) this->candado= true;       
-    else this->candado= false;
-    return this->candado;
-  }
-
-/************************************************/
-/* Devuelve el valor del candado                */
-/************************************************/
-boolean SistemaFicherosClass::getCandado(void) 
-  {
-    return this->candado;
-  }
-
 /************************************************/
 /* Recupera los datos de un archivo binario     */
 /************************************************/

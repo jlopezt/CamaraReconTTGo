@@ -219,6 +219,7 @@ String pintaParticionHTML(void)
   cad +="<BR>";
   cad += getParticionProximoUpdate();
   cad +="<BR>";
+  cad +="<a href=\"/restart\">Reinicia</a>";
    
   esp_partition_iterator_release(iterador);  
 

@@ -93,7 +93,7 @@ boolean EntradasClass::parseaConfiguracionEntradas(String contenido)
   for(int8_t i=0;i<max;i++)
     { 
     entradas[i].inicializaEntrada(CONFIGURADO, String((const char *)Entradas[i]["nombre"]), 0, String((const char *)Entradas[i]["tipo"]), atoi(Entradas[i]["GPIO"]));
-    /*
+    /* 
     entradas[i].setConfigurada(CONFIGURADO) ;//la inicializo a no configurada
     entradas[i].setNombre(String((const char *)Entradas[i]["nombre"]));
     entradas[i].setEstado(0);    

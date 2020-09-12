@@ -1,6 +1,6 @@
 {
-    "board": "esp32:esp32:esp32cam",
-    "configuration": "PartitionScheme=Aplicacion_OTA",
+    "board": "esp32:esp32:TTGOcamera",
+    "configuration": "PartitionScheme=default,FlashMode=qio,FlashFreq=80,UploadSpeed=921600,DebugLevel=none",
     "programmer": "AVRISP mkII",
-    "port": "COM4"
+    "port": "COM9"
 }

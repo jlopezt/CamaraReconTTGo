@@ -1,4 +1,11 @@
 {
-	"Entradas": []
+	"Entradas": 
+		[
+			{
+			"nombre": "pir",
+			"tipo": "INPUT",
+			"GPIO": 33
+			}
+		]
 }
 

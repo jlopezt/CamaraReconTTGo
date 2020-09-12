@@ -45,13 +45,13 @@ void salida::inicializaSalida(int8_t config, String nom, int8_t est, int8_t p, i
 void SalidasClass::inicializaSalidas()
   {  
   //inicializo la parte logica
-  for(int8_t i=0;i<MAX_RELES;i++) {reles[i].inicializaSalida();}
+  for(int8_t i=0;i<MAX_SALIDAS;i++) {reles[i].inicializaSalida();}
          
   //leo la configuracion del fichero
   if(!recuperaDatosSalidas(debugGlobal)) Serial.println("Configuracion de los reles por defecto");
   else
     {  
-    for(int8_t i=0;i<MAX_RELES;i++)
+    for(int8_t i=0;i<MAX_SALIDAS;i++)
       {      
       pinMode(reles[i].getPin(), OUTPUT); //es salida
       pinMode(reles[i].getPinLed(), OUTPUT); //es salida
@@ -72,7 +72,7 @@ void SalidasClass::inicializaSalidas()
       }
 
     //Salidas configuradas
-    for(int i=0;i<MAX_RELES;i++) if(reles[i].getConfigurado()==CONFIGURADO) Serial.printf("Nombre rele[%i]=%s | pin rele: %i | pin Led: %i | inicio: %i\n",i,reles[i].getNombre().c_str(),reles[i].getPin(),reles[i].getPinLed(),reles[i].getInicio());
+    for(int i=0;i<MAX_SALIDAS;i++) if(reles[i].getConfigurado()==CONFIGURADO) Serial.printf("Nombre rele[%i]=%s | pin rele: %i | pin Led: %i | inicio: %i\n",i,reles[i].getNombre().c_str(),reles[i].getPin(),reles[i].getPinLed(),reles[i].getInicio());
     }    
   }
 
@@ -113,7 +113,7 @@ boolean SalidasClass::parseaConfiguracionSalidas(String contenido)
   JsonArray& Salidas = json["Salidas"];
 
   int8_t max;
-  max=(Salidas.size()<MAX_RELES?Salidas.size():MAX_RELES);
+  max=(Salidas.size()<MAX_SALIDAS?Salidas.size():MAX_SALIDAS);
   for(int8_t i=0;i<max;i++)
     { 
     //Si de inicio debe estar activado o desactivado
@@ -125,7 +125,7 @@ boolean SalidasClass::parseaConfiguracionSalidas(String contenido)
     }
     
   Serial.printf("Salidas:\n"); 
-  for(int8_t i=0;i<MAX_RELES;i++) Serial.printf("%02i: %s| pin: %i| pinLed: %i| configurado= %i\n",i,reles[i].getNombre().c_str(),reles[i].getPin(),reles[i].getPinLed(),reles[i].getConfigurado()); 
+  for(int8_t i=0;i<MAX_SALIDAS;i++) Serial.printf("%02i: %s| pin: %i| pinLed: %i| configurado= %i\n",i,reles[i].getNombre().c_str(),reles[i].getPin(),reles[i].getPinLed(),reles[i].getConfigurado()); 
 //************************************************************************************************
   return true; 
   }
@@ -140,7 +140,7 @@ boolean SalidasClass::parseaConfiguracionSalidas(String contenido)
 /*************************************************/
 void SalidasClass::actualizaSalidas(bool debug)
   {
-  for(int8_t id=0;id<MAX_RELES;id++)
+  for(int8_t id=0;id<MAX_SALIDAS;id++)
     {
     if (reles[id].getConfigurado()==CONFIGURADO && reles[id].getEstado()==2) //esta configurado y pulsando
       {
@@ -175,7 +175,7 @@ void SalidasClass::actualizaSalidas(bool debug)
 /*************************************************/
 int8_t SalidasClass::getEstadoRele(int8_t id)
   {
-  if(id <0 || id>=MAX_RELES) return NO_CONFIGURADO; //Rele fuera de rango
+  if(id <0 || id>=MAX_SALIDAS) return NO_CONFIGURADO; //Rele fuera de rango
   if(reles[id].getConfigurado()!=CONFIGURADO) return -1; //No configurado
   
   return reles[id].getEstado();
@@ -188,7 +188,7 @@ int8_t SalidasClass::getEstadoRele(int8_t id)
 /********************************************************/
 String SalidasClass::getNombreRele(int8_t id)
   { 
-  if(id <0 || id>=MAX_RELES) return "ERROR"; //Rele fuera de rango    
+  if(id <0 || id>=MAX_SALIDAS) return "ERROR"; //Rele fuera de rango    
   return reles[id].getNombre();
   } 
 
@@ -199,7 +199,7 @@ String SalidasClass::getNombreRele(int8_t id)
 boolean SalidasClass::conmutaRele(int8_t id, boolean estado_final, int debug)
   {
   //validaciones previas
-  if(id <0 || id>=MAX_RELES) return false; //Rele fuera de rango
+  if(id <0 || id>=MAX_SALIDAS) return false; //Rele fuera de rango
   if(reles[id].getConfigurado()==NO_CONFIGURADO) return false; //El rele no esta configurado
   
   //parte logica
@@ -231,7 +231,7 @@ boolean SalidasClass::conmutaRele(int8_t id, boolean estado_final, int debug)
 boolean SalidasClass::pulsoRele(int8_t id)
   {
   //validaciones previas
-  if(id <0 || id>=MAX_RELES) return NO_CONFIGURADO;
+  if(id <0 || id>=MAX_SALIDAS) return NO_CONFIGURADO;
       
   //Pongo el rele en nivel Activo  
   if(!conmutaRele(id, cacharro.getNivelActivo(), debugGlobal)) return false; //Si no puede retorna -1
@@ -276,7 +276,7 @@ boolean SalidasClass::actuaRele(int8_t id, int8_t estado)
 /********************************************************/ 
 int8_t SalidasClass::getReleConfigurado(uint8_t id)
   {
-  if(id <0 || id>=MAX_RELES) return NO_CONFIGURADO;
+  if(id <0 || id>=MAX_SALIDAS) return NO_CONFIGURADO;
     
   return reles[id].getConfigurado();
   } 
@@ -289,7 +289,7 @@ int8_t SalidasClass::getReleConfigurado(uint8_t id)
 /********************************************************/ 
 int8_t SalidasClass::getPinReleLed(int8_t id)
   {
-  if(id <0 || id>=MAX_RELES) return NO_CONFIGURADO;
+  if(id <0 || id>=MAX_SALIDAS) return NO_CONFIGURADO;
     
   return reles[id].getPinLed();
   }   
@@ -301,7 +301,7 @@ int8_t SalidasClass::getPinReleLed(int8_t id)
 /********************************************************/ 
 int8_t SalidasClass::getPinRele(int8_t id)
   {
-  if(id <0 || id>=MAX_RELES) return NO_CONFIGURADO;
+  if(id <0 || id>=MAX_SALIDAS) return NO_CONFIGURADO;
     
   return reles[id].getPin();
   }   
@@ -313,7 +313,7 @@ int8_t SalidasClass::getPinRele(int8_t id)
 /********************************************************/ 
 int8_t SalidasClass::getInicioRele(int8_t id)
   {
-  if(id <0 || id>=MAX_RELES) return NO_CONFIGURADO;
+  if(id <0 || id>=MAX_SALIDAS) return NO_CONFIGURADO;
     
   return reles[id].getInicio();
   }   
@@ -327,7 +327,7 @@ int SalidasClass::relesConfigurados(void)
   {
   int resultado=0;
   
-  for(int8_t i=0;i<MAX_RELES;i++)
+  for(int8_t i=0;i<MAX_SALIDAS;i++)
     {
     if(reles[i].getConfigurado()==CONFIGURADO) resultado++;
     }
@@ -342,7 +342,7 @@ int SalidasClass::relesConfigurados(void)
 boolean SalidasClass::asociarSecuenciador(int8_t id, int8_t plan)
   {
   //validaciones previas
-  if(id <0 || id>=MAX_RELES) return false;
+  if(id <0 || id>=MAX_SALIDAS) return false;
 
   reles[id].setSecuenciador(plan); 
   return true;
@@ -357,7 +357,7 @@ boolean SalidasClass::asociarSecuenciador(int8_t id, int8_t plan)
 int8_t SalidasClass::getAsociadaASecuenciador(int8_t id)
   {
   //validaciones previas
-  if(id <0 || id>=MAX_RELES) return NO_CONFIGURADO;
+  if(id <0 || id>=MAX_SALIDAS) return NO_CONFIGURADO;
       
   return reles[id].getSecuenciador();  
   }   
@@ -386,7 +386,7 @@ String SalidasClass::generaJsonEstadoSalidas(void)
   JsonObject& root = jsonBuffer.createObject();
   
   JsonArray& Salidas = root.createNestedArray("Salidas");
-  for(int8_t id=0;id<MAX_RELES;id++)
+  for(int8_t id=0;id<MAX_SALIDAS;id++)
     {
     if(reles[id].getConfigurado()==CONFIGURADO)
       {

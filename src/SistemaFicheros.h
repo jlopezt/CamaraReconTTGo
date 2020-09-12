@@ -35,9 +35,6 @@ class SistemaFicherosClass
     boolean listaFicheros(String &contenido);
 
     boolean formatearFS(void);
-
-    boolean setCandado(void);
-    boolean getCandado(void);
   };
 
 extern SistemaFicherosClass SistemaFicheros;

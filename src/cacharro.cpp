@@ -5,6 +5,7 @@
 /***********************************************/
 
 /***************************** Defines *****************************/
+#define LED_BUILTIN              -1 //GPIO del led de la placa en los ESP32-CAM   
 /***************************** Defines *****************************/
 
 /***************************** Includes *****************************/
@@ -13,12 +14,6 @@
 /***************************** Includes *****************************/
 
 cacharroClass::cacharroClass() {}
-
-int cacharroClass::getNivelActivo(void) {return nivelActivo;};
-void cacharroClass::setNivelActivo(int nivel) {nivelActivo=nivel;};
-
-String cacharroClass::getNombreDispositivo(void) {return nombre_dispositivo;};
-void cacharroClass::setNombreDispositivo(String nombre) {nombre_dispositivo=nombre;};
 
 /********************************** Funciones de configuracion global **************************************/
 /************************************************/
@@ -112,5 +107,38 @@ String cacharroClass::generaJsonConfiguracionNivelActivo(String configActual, in
 
   return salida;  
   }  
+
+void cacharroClass::configuraLed(void)
+  {
+  if(LED_BUILTIN==-1) return;
+
+  pinMode(LED_BUILTIN, OUTPUT);
+  }
+
+void cacharroClass::enciendeLed(void)
+  {
+  if(LED_BUILTIN==-1) return;
+
+  digitalWrite(LED_BUILTIN, HIGH);
+  }
+
+void cacharroClass::apagaLed(void)
+  {
+  if(LED_BUILTIN==-1) return;
+
+  digitalWrite(LED_BUILTIN, LOW);
+  }
+
+void cacharroClass::parpadeaLed(uint8_t veces, uint16_t delayed)
+  {
+  if(LED_BUILTIN==-1) return;
+  
+  for(uint8_t i=0;i<2*veces;i++)
+    {  
+    delay(delayed);
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+    }
+  }
+void cacharroClass::parpadeaLed(uint8_t veces){parpadeaLed(veces,100);}
 
 cacharroClass cacharro;

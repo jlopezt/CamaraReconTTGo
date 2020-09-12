@@ -165,6 +165,7 @@ void faceRecon_init(boolean debug)
     }
 
   aligned_face = dl_matrix3du_alloc(1, FACE_WIDTH, FACE_HEIGHT, 3);  
+  if(aligned_face==NULL) Serial.printf("Ma' fallao!!!");
   }
 
 boolean recuperaDatosCaras(boolean debug)
@@ -480,6 +481,28 @@ void activaRecon(boolean activar)
 
 /******************************************************/
 /*                                                    */
+/*    Devuelve el estado del reconocimiento facial    */ 
+/*                                                    */
+/******************************************************/
+boolean getRecon(void)
+  {
+  return reconocerCaras;
+  }
+
+/******************************************************/
+/*                                                    */
+/*      Cambia el modo del reconocimeinto facial      */ 
+/*                                                    */
+/******************************************************/
+void flipRecon(void)
+  {
+  Serial.printf("El reconocimiento facial estaba %s\n",(reconocerCaras?"on":"off"));  
+  reconocerCaras=!reconocerCaras;
+  Serial.printf("ahora esta %s\n",(reconocerCaras?"on":"off"));  
+  }
+
+/******************************************************/
+/*                                                    */
 /* Envia el mensaje de cara reconocida mediante MQTT  */ 
 /* boolean enviarMQTT(String topic, String payload);  */
 /******************************************************/
@@ -532,10 +555,20 @@ void reconocimientoFacial(boolean debug)
     {
     if(debug) Serial.printf("Imagen leida de la camara\n");
     dl_matrix3du_t *image_matrix =  dl_matrix3du_alloc(1, fb->width, fb->height, 3);//dl_matrix3du_alloc(1, 320, 240, 3); //NO GESTIONO QUE SEA NULL
-    if(!image_matrix) Serial.printf("AAAArrrrrrgggggghhhh!!!!!!!!!!!!!!!!!!");
-    /**************************INICIO RECONOCER CARA*********************/
-    if(reconocerCaras)
+    if(!image_matrix) 
       {
+      Serial.printf("AAAArrrrrrgggggghhhh!!!!!!!!!!!!!!!!!!");
+      return;
+      }
+
+    /**************************INICIO RECONOCER CARA*********************/
+    if(!Entradas.estadoEntrada(0))//if(reconocerCaras && image_matrix)
+      {
+      pintaCadenaLimpia("Esperando...");
+      }
+    else
+      {
+      pintaCadenaLimpia("Buscando...");
       if(debug) Serial.printf("Convierte la imagen\n");
 
       fmt2rgb888(fb->buf, fb->len, fb->format, image_matrix->item); //NO GESTIONO EL KO!!! 
@@ -576,7 +609,8 @@ void reconocimientoFacial(boolean debug)
               if (f)
                 {
                 //cara reconocida
-                String cad="Reconocido: "+ String(f->id_name);  
+                String cad="Reconocido: \n"+ String(f->id_name);
+                pintaCadenaLimpia(cad);
                 if(debug) Serial.printf("%s\n", cad.c_str());
                 enviarWSTXT(cad);
                 caraReconocida(f->id_name);
@@ -585,12 +619,18 @@ void reconocimientoFacial(boolean debug)
                 {
                 //cara no reconocida 
                 if(debug) Serial.printf("Cara no reconocida\n"); 
+                pintaCadenaLimpia("Cara no\nreconocida");
                 enviarWSTXT("Cara no reconocida");
                 }
               }
             }
           dl_matrix3d_free(face_id_x); //Evito memory leaks
           }
+        else
+          {
+          pintaCadenaLimpia("No hay cara");
+          }
+        
           //Evito memory leaks
           free(net_boxes_x->score);
           free(net_boxes_x->box);

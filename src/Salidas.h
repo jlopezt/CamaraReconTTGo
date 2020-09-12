@@ -58,7 +58,7 @@ class salida
 class SalidasClass
   {
   private:
-  salida reles[MAX_RELES];
+  salida reles[MAX_SALIDAS];
 
   public:
   //funciones de configuracion
